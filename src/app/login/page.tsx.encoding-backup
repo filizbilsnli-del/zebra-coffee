@@ -1,0 +1,224 @@
+﻿"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { Coffee, Mail, Lock, ArrowLeft, UserRound, Globe } from "lucide-react";
+
+export default function LoginPage() {
+  const router = useRouter();
+
+  const [language, setLanguage] = useState<"AZ" | "EN">("AZ");
+  const [isRegister, setIsRegister] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const isAZ = language === "AZ";
+
+  const t = (en: string, az: string) => isAZ ? az : en;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    setLoading(true);
+    setMessage("");
+    setError("");
+
+    try {
+      if (isRegister) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        if (data.session) {
+          router.push("/loyalty");
+          router.refresh();
+        } else {
+          setMessage(
+            t(
+              "Registration successful! Please check your email to confirm your account.",
+              "Qeydiyyat uÄŸurludur! HesabÄ±nÄ± tÉ™sdiqlÉ™mÉ™k Ã¼Ã§Ã¼n email Ã¼nvanÄ±nÄ± yoxla."
+            )
+          );
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        router.push("/loyalty");
+        router.refresh();
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t("Something went wrong.", "XÉ™ta baÅŸ verdi.")
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#faf7f1] px-5 py-12 pb-28 text-[#38271f]">
+      <div className="w-full max-w-md">
+
+        <div className="mb-8 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-[#795b45] hover:text-[#38271f]">
+            <ArrowLeft size={18} />
+            {t("Back to home", "Ana sÉ™hifÉ™yÉ™ qayÄ±t")}
+          </Link>
+
+          <button
+            onClick={() => setLanguage(isAZ ? "EN" : "AZ")}
+            className="flex items-center gap-2 rounded-full border border-[#e4d8c9] px-4 py-2 text-sm font-bold"
+          >
+            <Globe size={16} />
+            {language}
+          </button>
+        </div>
+
+        <div className="rounded-[2rem] border border-[#eadfD1] bg-white p-8 shadow-xl sm:p-10">
+
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#553b2c] text-[#f5e7d1]">
+              <Coffee size={30} />
+            </div>
+
+            <h1 className="text-2xl font-black tracking-[0.15em]">
+              ZEBRA COFFEE
+            </h1>
+
+            <p className="mt-3 text-sm text-[#987b65]">
+              {isRegister
+                ? t("Create your account", "HesabÄ±nÄ± yarat")
+                : t("Welcome back", "XoÅŸ gÉ™lmisÉ™n")}
+            </p>
+          </div>
+
+          <div className="mb-7 grid grid-cols-2 rounded-full bg-[#f5efe7] p-1">
+            <button
+              onClick={() => {
+                setIsRegister(false);
+                setError("");
+                setMessage("");
+              }}
+              className={`rounded-full py-3 text-sm font-bold transition ${
+                !isRegister
+                  ? "bg-[#553b2c] text-white shadow"
+                  : "text-[#806651]"
+              }`}
+            >
+              {t("Sign in", "GiriÅŸ")}
+            </button>
+
+            <button
+              onClick={() => {
+                setIsRegister(true);
+                setError("");
+                setMessage("");
+              }}
+              className={`rounded-full py-3 text-sm font-bold transition ${
+                isRegister
+                  ? "bg-[#553b2c] text-white shadow"
+                  : "text-[#806651]"
+              }`}
+            >
+              {t("Register", "Qeydiyyat")}
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                {t("Email address", "Email Ã¼nvanÄ±")}
+              </label>
+
+              <div className="flex items-center gap-3 rounded-xl border border-[#e8ded2] px-4 py-3 focus-within:border-[#987253]">
+                <Mail size={19} className="text-[#987253]" />
+
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@email.com"
+                  className="w-full bg-transparent text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold">
+                {t("Password", "ÅifrÉ™")}
+              </label>
+
+              <div className="flex items-center gap-3 rounded-xl border border-[#e8ded2] px-4 py-3 focus-within:border-[#987253]">
+                <Lock size={19} className="text-[#987253]" />
+
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t("At least 6 characters", "Æn azÄ± 6 simvol")}
+                  className="w-full bg-transparent text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+
+            {message && (
+              <p className="rounded-xl bg-green-50 p-3 text-sm text-green-800">
+                {message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[#553b2c] py-4 font-bold text-white transition hover:bg-[#76533c] disabled:opacity-60"
+            >
+              <UserRound size={18} />
+              {loading
+                ? t("Please wait...", "GÃ¶zlÉ™...")
+                : isRegister
+                  ? t("Create account", "Hesab yarat")
+                  : t("Sign in", "Daxil ol")}
+            </button>
+
+          </form>
+
+          <p className="mt-7 text-center text-xs leading-6 text-[#987b65]">
+            {t(
+              "Join Zebra Rewards and collect points with every order.",
+              "Zebra Rewards-a qoÅŸul vÉ™ hÉ™r sifariÅŸlÉ™ bonus xallarÄ± qazan."
+            )}
+          </p>
+        </div>
+
+        <p className="mt-6 text-center text-xs tracking-widest text-[#a58a73]">
+          ZEBRA COFFEE HOUSE
+        </p>
+      </div>
+    </main>
+  );
+}

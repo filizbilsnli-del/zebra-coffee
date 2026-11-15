@@ -1,0 +1,263 @@
+﻿"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Coffee,
+  Gift,
+  ArrowLeft,
+  Star,
+  History,
+  LogOut,
+  Loader2,
+  Globe,
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+type Transaction = {
+  id: number;
+  points: number;
+  transaction_type: "earned" | "redeemed";
+  description: string | null;
+  created_at: string;
+};
+
+export default function LoyaltyPage() {
+  const router = useRouter();
+
+  const [language, setLanguage] = useState<"AZ" | "EN">("AZ");
+  const [userEmail, setUserEmail] = useState("");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const isAZ = language === "AZ";
+  const t = (en: string, az: string) => isAZ ? az : en;
+
+  const earned = transactions
+    .filter((item) => item.transaction_type === "earned")
+    .reduce((sum, item) => sum + item.points, 0);
+
+  const redeemed = transactions
+    .filter((item) => item.transaction_type === "redeemed")
+    .reduce((sum, item) => sum + item.points, 0);
+
+  const balance = earned - redeemed;
+
+  useEffect(() => {
+    async function loadLoyalty() {
+      const { data: { user }, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError || !user) {
+        router.replace("/login");
+        return;
+      }
+
+      setUserEmail(user.email ?? "");
+
+      const { data, error: queryError } = await supabase
+        .from("loyalty_transactions")
+        .select("id, points, transaction_type, description, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (queryError) {
+        setError(
+          t(
+            "Could not load your rewards. Please try again.",
+            "Bonus mÉ™lumatlarÄ±nÄ± yÃ¼klÉ™mÉ™k mÃ¼mkÃ¼n olmadÄ±. YenidÉ™n yoxla."
+          )
+        );
+      } else {
+        setTransactions(data ?? []);
+      }
+
+      setLoading(false);
+    }
+
+    loadLoyalty();
+  }, [router]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
+  return (
+    <main className="min-h-screen bg-[#faf7f1] px-5 py-8 pb-28 text-[#38271f]">
+      <div className="mx-auto max-w-5xl">
+
+        <header className="mb-10 flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm font-bold text-[#795b45]"
+          >
+            <ArrowLeft size={18} />
+            {t("Home", "Ana sÉ™hifÉ™")}
+          </Link>
+
+          <button
+            onClick={() => setLanguage(isAZ ? "EN" : "AZ")}
+            className="flex items-center gap-2 rounded-full border border-[#e4d8c9] px-4 py-2 text-sm font-bold"
+          >
+            <Globe size={16} />
+            {language}
+          </button>
+        </header>
+
+        <section className="mb-10 text-center">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#553b2c] text-[#f5e7d1]">
+            <Gift size={30} />
+          </div>
+
+          <p className="mb-3 text-xs font-black tracking-[0.35em] text-[#a17a59]">
+            ZEBRA REWARDS
+          </p>
+
+          <h1 className="text-4xl font-black sm:text-5xl">
+            {t("Your rewards", "SÉ™nin bonuslarÄ±n")}
+          </h1>
+
+          <p className="mt-4 text-sm text-[#987b65]">
+            {t(
+              "Every coffee brings you closer to a reward.",
+              "HÉ™r qÉ™hvÉ™ sÉ™ni yeni mÃ¼kafata yaxÄ±nlaÅŸdÄ±rÄ±r."
+            )}
+          </p>
+        </section>
+
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-[#795b45]" size={35} />
+          </div>
+        ) : (
+          <>
+            <section className="rounded-[2rem] bg-[#553b2c] p-8 text-white shadow-xl sm:p-12">
+              <div className="flex items-center gap-3 text-[#e8c9a6]">
+                <Star size={22} />
+                <span className="text-sm font-bold tracking-widest">
+                  {t("YOUR POINTS BALANCE", "BONUS BALANSIN")}
+                </span>
+              </div>
+
+              <div className="mt-6 flex items-end gap-3">
+                <span className="text-6xl font-black">{balance}</span>
+                <span className="pb-2 text-lg text-[#e8c9a6]">
+                  {t("points", "bal")}
+                </span>
+              </div>
+
+              <p className="mt-5 text-sm text-[#e8d8c7]">
+                {userEmail}
+              </p>
+
+              <div className="mt-8 grid grid-cols-2 gap-4 border-t border-white/20 pt-6">
+                <div>
+                  <p className="text-xs text-[#e8c9a6]">
+                    {t("Total earned", "QazanÄ±lan")}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold">+{earned}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-[#e8c9a6]">
+                    {t("Total redeemed", "Ä°stifadÉ™ edilÉ™n")}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold">-{redeemed}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-10 rounded-[2rem] border border-[#eadfd1] bg-white p-7 shadow-sm sm:p-9">
+              <div className="mb-7 flex items-center gap-3">
+                <History className="text-[#987253]" size={23} />
+                <h2 className="text-xl font-black">
+                  {t("Points history", "Bonus tarixÃ§É™si")}
+                </h2>
+              </div>
+
+              {error ? (
+                <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+                  {error}
+                </p>
+              ) : transactions.length === 0 ? (
+                <div className="py-10 text-center">
+                  <Coffee
+                    size={35}
+                    className="mx-auto mb-4 text-[#b69b82]"
+                  />
+                  <p className="font-bold">
+                    {t("No rewards yet", "HÉ™lÉ™ bonus yoxdur")}
+                  </p>
+                  <p className="mt-2 text-sm text-[#987b65]">
+                    {t(
+                      "Your points and transactions will appear here.",
+                      "BonuslarÄ±n vÉ™ É™mÉ™liyyatlarÄ±n burada gÃ¶rÃ¼nÉ™cÉ™k."
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#eee5dc]">
+                  {transactions.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-4 py-5"
+                    >
+                      <div>
+                        <p className="font-bold">
+                          {item.description ||
+                            (item.transaction_type === "earned"
+                              ? t("Points earned", "Bonus qazanÄ±ldÄ±")
+                              : t("Points redeemed", "Bonus istifadÉ™ edildi"))}
+                        </p>
+
+                        <p className="mt-1 text-xs text-[#a18a75]">
+                          {new Date(item.created_at).toLocaleDateString(
+                            isAZ ? "az-AZ" : "en-US"
+                          )}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`shrink-0 font-black ${
+                          item.transaction_type === "earned"
+                            ? "text-green-700"
+                            : "text-[#a15b42]"
+                        }`}
+                      >
+                        {item.transaction_type === "earned" ? "+" : "-"}
+                        {item.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-4">
+              <Link
+                href="/menu"
+                className="flex items-center gap-2 rounded-full bg-[#553b2c] px-7 py-4 text-sm font-bold text-white hover:bg-[#76533c]"
+              >
+                <Coffee size={18} />
+                {t("Explore menu", "Menyuya bax")}
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 rounded-full border border-[#dfd0c0] px-7 py-4 text-sm font-bold hover:bg-[#f1e8de]"
+              >
+                <LogOut size={18} />
+                {t("Sign out", "Ã‡Ä±xÄ±ÅŸ")}
+              </button>
+            </div>
+          </>
+        )}
+
+      </div>
+    </main>
+  );
+}
