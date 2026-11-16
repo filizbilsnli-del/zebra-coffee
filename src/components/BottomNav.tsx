@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Coffee, Gift, Info, ShoppingBag } from "lucide-react";
+import {
+  House,
+  Coffee,
+  Gift,
+  Info,
+  ShoppingBag,
+  ListOrdered,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function BottomNav() {
@@ -24,6 +31,11 @@ export default function BottomNav() {
       href: "/loyalty",
       label: isAZ ? "Bonuslar" : "Loyalty",
       icon: Gift,
+    },
+    {
+      href: "/orders",
+      label: isAZ ? "Sifarişlərim" : "My Orders",
+      icon: ListOrdered,
     },
     {
       href: "/about",

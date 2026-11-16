@@ -42,13 +42,19 @@ export default function LoginPage() {
       if (isRegister) {
         if (!fullName.trim() || !birthDate) {
           throw new Error(
-            t("Please complete all profile fields.", "Bütün profil xanalarını doldur.")
+            t(
+              "Please complete all profile fields.",
+              "Bütün profil xanalarını doldur."
+            )
           );
         }
 
         if (new Date(birthDate) > new Date()) {
           throw new Error(
-            t("Birth date cannot be in the future.", "Doğum tarixi gələcək tarix ola bilməz.")
+            t(
+              "Birth date cannot be in the future.",
+              "Doğum tarixi gələcək tarix ola bilməz."
+            )
           );
         }
 
@@ -78,14 +84,21 @@ export default function LoginPage() {
           );
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) throw error;
 
-        router.push("/loyalty");
+        const userRole = data.user?.app_metadata?.role;
+
+        if (userRole === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/loyalty");
+        }
+
         router.refresh();
       }
     } catch (err: unknown) {
@@ -102,7 +115,6 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#faf7f1] px-5 py-12 pb-28 text-[#38271f]">
       <div className="w-full max-w-md">
-
         <div className="mb-8 flex items-center justify-between">
           <Link
             href="/"
@@ -114,7 +126,6 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-[2rem] border border-[#eadfd1] bg-white p-8 shadow-xl sm:p-10">
-
           <div className="mb-8 text-center">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#553b2c] text-[#f5e7d1]">
               <Coffee size={30} />
@@ -166,7 +177,6 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
             {isRegister && (
               <>
                 <div>

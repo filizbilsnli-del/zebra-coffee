@@ -19,7 +19,6 @@ import {
   Pencil,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import OrderHistory from "@/components/OrderHistory";
 
 type Transaction = {
   id: number;
@@ -35,6 +34,16 @@ type Profile = {
   student_status: "not_student" | "pending" | "verified" | "rejected";
 };
 
+type MonthlyReward = {
+  lifetime_points?: number;
+  reward_name?: string | null;
+  reward?: string | null;
+  status?: "available" | "used";
+  reward_month?: string;
+  level?: string;
+  message?: string;
+};
+
 export default function LoyaltyPage() {
   const router = useRouter();
   const { isAZ } = useLanguage();
@@ -44,6 +53,9 @@ export default function LoyaltyPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
+  const [monthlyReward, setMonthlyReward] =
+    useState<MonthlyReward | null>(null);
 
   const t = (en: string, az: string) => (isAZ ? az : en);
 
@@ -52,10 +64,97 @@ export default function LoyaltyPage() {
     .reduce((sum, item) => sum + item.points, 0);
 
   const redeemed = transactions
-  .filter((item) => item.transaction_type === "redeemed")
-  .reduce((sum, item) => sum + Math.abs(item.points), 0);
+    .filter((item) => item.transaction_type === "redeemed")
+    .reduce((sum, item) => sum + Math.abs(item.points), 0);
+
   const balance = earned - redeemed;
   const moneyValue = (balance / 100).toFixed(2);
+  const lifetimePoints = earned;
+
+    const levels = [
+    {
+      min: 0,
+      max: 100,
+      name: "Coffee Beginner",
+      nameAZ: "Qəhvə həvəskarı",
+      emoji: "☕",
+      reward: "No extra monthly reward",
+      rewardAZ: "Əlavə aylıq mükafat yoxdur",
+      description: "Collect points to unlock your first member reward.",
+      descriptionAZ: "İlk üzv mükafatını açmaq üçün bonus xalları topla.",
+    },
+    {
+      min: 100,
+      max: 300,
+      name: "Zebra Friend",
+      nameAZ: "Zebra dostu",
+      emoji: "🦓",
+      reward: "5% extra monthly discount",
+      rewardAZ: "5% əlavə aylıq endirim",
+      description:
+        "Enjoy one additional 5% discount per month. It cannot be combined with student or birthday discounts.",
+      descriptionAZ:
+        "Ayda bir dəfə əlavə 5% endirim qazan. Tələbə və ad günü endirimləri ilə birləşdirilmir.",
+    },
+    {
+      min: 300,
+      max: 600,
+      name: "Coffee Lover",
+      nameAZ: "Qəhvə sevən",
+      emoji: "⭐",
+      reward: "One free espresso shot or syrup",
+      rewardAZ: "Bir pulsuz espresso shot və ya sirop",
+      description:
+        "Choose one free extra espresso shot or one syrup per month.",
+      descriptionAZ:
+        "Hər ay bir pulsuz əlavə espresso shot və ya bir sirop seç.",
+    },
+    {
+      min: 600,
+      max: 1000,
+      name: "Gold Member",
+      nameAZ: "Qızıl üzv",
+      emoji: "👑",
+      reward: "One free size upgrade",
+      rewardAZ: "Bir dəfə pulsuz ölçü artırılması",
+      description:
+        "Upgrade Small to Medium or Medium to Large once per month.",
+      descriptionAZ:
+        "Ayda bir dəfə Kiçik ölçünü Orta, yaxud Orta ölçünü Böyük ölçüyə pulsuz artır.",
+    },
+    {
+      min: 1000,
+      max: Infinity,
+      name: "Zebra Legend",
+      nameAZ: "Zebra əfsanəsi",
+      emoji: "💎",
+      reward: "One free standard drink",
+      rewardAZ: "Bir pulsuz standart içki",
+      description:
+        "Choose one free standard drink per month from the selected drinks.",
+      descriptionAZ:
+        "Hər ay müəyyən edilmiş standart içkilər arasından birini pulsuz seç.",
+    },
+  ];
+
+  const currentLevel =
+    [...levels].reverse().find((level) => lifetimePoints >= level.min) ??
+    levels[0];
+
+  const nextLevel = levels[levels.indexOf(currentLevel) + 1];
+
+  const pointsToNextLevel = nextLevel
+    ? Math.max(0, nextLevel.min - lifetimePoints)
+    : 0;
+
+  const levelProgress = nextLevel
+    ? Math.min(
+        100,
+        ((lifetimePoints - currentLevel.min) /
+          (nextLevel.min - currentLevel.min)) *
+          100
+      )
+    : 100;
 
   const today = new Date();
   const birthDate = profile?.birth_date;
@@ -81,6 +180,18 @@ export default function LoyaltyPage() {
         }
 
         setUserEmail(user.email ?? "");
+
+        // MONTHLY MEMBER REWARD
+        const {
+          data: monthlyRewardData,
+          error: monthlyRewardError,
+        } = await supabase.rpc("sync_monthly_member_reward");
+
+        if (monthlyRewardError) {
+          console.error("Monthly reward error:", monthlyRewardError);
+        } else {
+          setMonthlyReward(monthlyRewardData as MonthlyReward);
+        }
 
         const [profileResult, transactionResult] = await Promise.all([
           supabase
@@ -108,7 +219,9 @@ export default function LoyaltyPage() {
 
         setProfile(profileResult.data as Profile | null);
         setTransactions(transactionResult.data ?? []);
-      } catch {
+      } catch (err) {
+        console.error("Loyalty loading error:", err);
+
         setError(
           t(
             "Could not load your rewards. Please try again.",
@@ -142,10 +255,37 @@ export default function LoyaltyPage() {
     }
   }
 
+  function monthlyRewardName() {
+    const rewardName = monthlyReward?.reward_name;
+
+    if (rewardName === "5% monthly member discount") {
+      return t("5% monthly member discount", "5% aylıq üzv endirimi");
+    }
+
+    if (rewardName === "One free espresso shot or syrup") {
+      return t(
+        "One free espresso shot or syrup",
+        "Bir pulsuz espresso shot və ya sirop"
+      );
+    }
+
+    if (rewardName === "One free size upgrade") {
+      return t(
+        "One free size upgrade",
+        "Bir dəfə pulsuz ölçü artırılması"
+      );
+    }
+
+    if (rewardName === "One free standard drink") {
+      return t("One free standard drink", "Bir pulsuz standart içki");
+    }
+
+    return rewardName ?? "";
+  }
+
   return (
     <main className="min-h-screen bg-[#faf7f1] px-5 py-8 pb-28 text-[#38271f]">
       <div className="mx-auto max-w-5xl">
-
         <header className="mb-10 flex items-center justify-between">
           <Link
             href="/"
@@ -191,7 +331,6 @@ export default function LoyaltyPage() {
 
             {/* PROFILE */}
             <section className="mb-8 rounded-[2rem] border border-[#eadfd1] bg-white p-7 shadow-sm">
-
               <div className="mb-6 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <UserRound size={23} className="text-[#987253]" />
@@ -235,7 +374,273 @@ export default function LoyaltyPage() {
                 </div>
               </div>
             </section>
-<OrderHistory />
+
+            {/* ZEBRA LEVEL */}
+            <section className="mb-8 overflow-hidden rounded-[2rem] border border-[#e8c9a6] bg-gradient-to-r from-[#fffaf2] to-[#f1e5d5] p-7 shadow-sm sm:p-9">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black tracking-[0.25em] text-[#a17a59]">
+                    ZEBRA REWARDS CLUB
+                  </p>
+
+                  <h2 className="mt-3 text-2xl font-black">
+                    {t("Your member level", "Sənin üzvlük səviyyən")}
+                  </h2>
+
+                  <p className="mt-2 text-sm text-[#987b65]">
+                    {t(
+                      "Your level is based on all points you have ever earned.",
+                      "Səviyyən indiyə qədər qazandığın bütün bonuslara əsaslanır."
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#553b2c] text-4xl shadow-md">
+                  {currentLevel.emoji}
+                </div>
+              </div>
+
+              <div className="mt-7 rounded-2xl bg-white/80 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#a17a59]">
+                  {t("CURRENT LEVEL", "HAZIRKI SƏVİYYƏ")}
+                </p>
+
+                <h3 className="mt-2 text-3xl font-black text-[#553b2c]">
+                  {t(currentLevel.name, currentLevel.nameAZ)}
+                </h3>
+
+                <p className="mt-2 text-sm font-bold text-[#987b65]">
+                  {lifetimePoints} {t("lifetime points", "ümumi qazanılmış bal")}
+                </p>
+              </div>
+
+              {nextLevel ? (
+                <div className="mt-6">
+                  <div className="mb-3 flex justify-between gap-3 text-sm">
+                    <span className="font-bold text-[#795b45]">
+                      {t("Next level:", "Növbəti səviyyə:")}{" "}
+                      {t(nextLevel.name, nextLevel.nameAZ)}
+                    </span>
+
+                    <span className="font-black text-[#795b45]">
+                      {pointsToNextLevel} {t("points left", "bal qalıb")}
+                    </span>
+                  </div>
+
+                  <div className="h-3 overflow-hidden rounded-full bg-[#e8d8c7]">
+                    <div
+                      className="h-full rounded-full bg-[#987253] transition-all duration-700"
+                      style={{ width: `${levelProgress}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-6 font-bold text-[#795b45]">
+                  {t(
+                    "Congratulations! You have reached the highest level!",
+                    "Təbriklər! Ən yüksək səviyyəyə çatmısan!"
+                  )}
+                </p>
+              )}
+
+              <p className="mt-5 text-xs leading-5 text-[#987b65]">
+                {t(
+                  "Redeeming points does not reduce your member level.",
+                  "Bonuslardan istifadə etmək üzvlük səviyyəni azaltmır."
+                )}
+              </p>
+
+              <div className="mt-7">
+                <h3 className="mb-4 text-lg font-black text-[#553b2c]">
+                  {t("Explore all levels", "Bütün səviyyələr")}
+                </h3>
+
+                <div className="space-y-3">
+                  {levels.map((level) => {
+                    const isExpanded = expandedLevel === level.name;
+                    const isUnlocked = lifetimePoints >= level.min;
+                    const isCurrent = currentLevel.name === level.name;
+
+                    const range =
+                      level.max === Infinity
+                        ? "1000+"
+                        : `${level.min}–${level.max - 1}`;
+
+                    return (
+                      <div
+                        key={level.name}
+                        className="overflow-hidden rounded-2xl border border-[#e8d8c7] bg-white/80"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedLevel(isExpanded ? null : level.name)
+                          }
+                          className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[#fffaf2]"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f5eadc] text-2xl">
+                              {level.emoji}
+                            </span>
+
+                            <div>
+                              <p className="font-black text-[#553b2c]">
+                                {t(level.name, level.nameAZ)}
+                              </p>
+                              <p className="text-sm text-[#987b65]">
+                                {range} {t("points", "bal")}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {isCurrent && (
+                              <span className="rounded-full bg-[#553b2c] px-3 py-1 text-xs font-bold text-white">
+                                {t("Your level", "Sənin səviyyən")}
+                              </span>
+                            )}
+
+                            {!isCurrent && isUnlocked && (
+                              <span className="text-xs font-bold text-green-700">
+                                {t("Unlocked", "Açılıb")}
+                              </span>
+                            )}
+
+                            <span className="text-xl text-[#795b45]">
+                              {isExpanded ? "−" : "+"}
+                            </span>
+                          </div>
+                        </button>
+
+                                               {isExpanded && (
+                          <div className="border-t border-[#e8d8c7] bg-[#fffaf2] p-4">
+                            <p className="text-sm leading-6 text-[#795b45]">
+                              {t("Required points:", "Tələb olunan bonus bal:")}{" "}
+                              <strong>{range}</strong>
+                            </p>
+
+                            <div className="mt-4 rounded-xl border border-[#e8d8c7] bg-white p-4">
+                              <p className="text-xs font-black tracking-wider text-[#a17a59]">
+                                {t("MONTHLY GIFT", "AYLIQ HƏDİYYƏ")}
+                              </p>
+
+                              <p className="mt-2 text-lg font-black text-[#553b2c]">
+                                {t(level.reward, level.rewardAZ)}
+                              </p>
+
+                              <p className="mt-2 text-sm leading-6 text-[#987b65]">
+                                {t(level.description, level.descriptionAZ)}
+                              </p>
+
+                              {level.min > 0 && (
+                                <p className="mt-3 text-xs font-bold text-[#795b45]">
+                                  {t(
+                                    "Available once per month.",
+                                    "Ayda bir dəfə istifadə edilə bilər."
+                                  )}
+                                </p>
+                              )}
+                            </div>
+
+                            {isCurrent && (
+                              <p className="mt-3 text-sm font-bold text-green-700">
+                                {t(
+                                  "This is your current level!",
+                                  "Bu, sənin hazırkı səviyyəndir!"
+                                )}
+                              </p>
+                            )}
+
+                            {!isUnlocked && (
+                              <p className="mt-3 text-sm font-bold text-[#795b45]">
+                                {level.min - lifetimePoints}{" "}
+                                {t(
+                                  "more points needed to unlock this level.",
+                                  "bal toplamalısan ki, bu səviyyəni açasan."
+                                )}
+                              </p>
+                            )}
+
+                            {isUnlocked && !isCurrent && (
+                              <p className="mt-3 text-sm font-bold text-green-700">
+                                {t(
+                                  "You have unlocked this level!",
+                                  "Bu səviyyəni artıq qazanmısan!"
+                                )}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* MONTHLY MEMBER REWARD */}
+            <section className="mb-8 overflow-hidden rounded-[2rem] border border-[#e8c9a6] bg-gradient-to-r from-[#fffaf2] to-[#f1e5d5] p-7 shadow-sm sm:p-9">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#553b2c] text-[#f5e7d1]">
+                  <Gift size={28} />
+                </div>
+
+                <div>
+                  <p className="text-xs font-black tracking-[0.2em] text-[#a17a59]">
+                    ZEBRA MONTHLY REWARD
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black text-[#553b2c]">
+                    {t("Your monthly reward", "Aylıq mükafatın")}
+                  </h2>
+                </div>
+              </div>
+
+              {monthlyReward?.reward_name ? (
+                <>
+                  <div className="mt-6 rounded-2xl bg-white/80 p-5">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#a17a59]">
+                      {t("THIS MONTH'S REWARD", "BU AYIN MÜKAFATI")}
+                    </p>
+
+                    <h3 className="mt-3 text-xl font-black text-[#553b2c]">
+                      {monthlyRewardName()}
+                    </h3>
+
+                    <span
+                      className={`mt-4 inline-block rounded-full px-4 py-2 text-xs font-bold ${
+                        monthlyReward.status === "used"
+                          ? "bg-gray-100 text-gray-600"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {monthlyReward.status === "used"
+                        ? t(
+                            "Already used this month",
+                            "Bu ay istifadə edilib"
+                          )
+                        : t(
+                            "Available this month",
+                            "Bu ay istifadə üçün aktivdir"
+                          )}
+                    </span>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-6 text-[#795b45]">
+                    {t(
+                      "Your monthly reward is based on your current membership level. You can use it once per month.",
+                      "Aylıq mükafatın hazırkı üzvlük səviyyənə əsaslanır. Bu mükafatdan ay ərzində yalnız bir dəfə istifadə edə bilərsən."
+                    )}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-6 text-sm leading-6 text-[#795b45]">
+                  {t(
+                    "Reach 100 lifetime points to unlock your first monthly member reward.",
+                    "İlk aylıq üzv mükafatını açmaq üçün ümumilikdə 100 bal topla."
+                  )}
+                </p>
+              )}
+            </section>
 
             {/* POINTS BALANCE */}
             <section className="rounded-[2rem] bg-[#553b2c] p-8 text-white shadow-xl sm:p-12">
@@ -285,6 +690,40 @@ export default function LoyaltyPage() {
               </div>
             </section>
 
+            {/* HAPPY HOUR */}
+            <section className="mt-8 overflow-hidden rounded-[2rem] border border-[#e8c9a6] bg-gradient-to-r from-[#553b2c] to-[#795b45] p-7 text-white shadow-lg sm:p-9">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e8c9a6]/20 text-[#f5d6ad]">
+                  <Coffee size={30} />
+                </div>
+
+                <div>
+                  <p className="text-xs font-black tracking-[0.25em] text-[#e8c9a6]">
+                    ZEBRA HAPPY HOUR
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black">
+                    {t("Double Points", "İkiqat bonus")}
+                  </h2>
+                </div>
+              </div>
+
+              <p className="mt-6 text-4xl font-black text-[#f5d6ad]">
+                08:00 – 10:00
+              </p>
+
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[#f5e7d1]">
+                {t(
+                  "Order every day during Happy Hour and earn 2x loyalty points automatically!",
+                  "Hər gün Happy Hour saatlarında sifariş et və avtomatik olaraq 2 qat bonus qazan!"
+                )}
+              </p>
+
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs font-bold text-[#f5d6ad]">
+                <Star size={15} />
+                {t("No activation required", "Aktivləşdirməyə ehtiyac yoxdur")}
+              </div>
+            </section>
+
             {/* DISCOUNTS */}
             <section className="mt-10">
               <h2 className="mb-6 text-2xl font-black">
@@ -292,7 +731,6 @@ export default function LoyaltyPage() {
               </h2>
 
               <div className="grid gap-5 sm:grid-cols-2">
-
                 {/* BIRTHDAY */}
                 <div className="rounded-[2rem] border border-[#eadfd1] bg-white p-7 shadow-sm">
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#f8e8e1] text-[#a15b42]">
@@ -418,7 +856,7 @@ export default function LoyaltyPage() {
                         }`}
                       >
                         {item.transaction_type === "earned" ? "+" : "-"}
-{Math.abs(item.points)}
+                        {Math.abs(item.points)}
                       </span>
                     </div>
                   ))}

@@ -218,7 +218,7 @@ export default function AdminPage() {
     loadApplications();
   }, []);
 
-  async function updateStatus(item: Verification, newStatus: "verified" | "rejected") {
+       async function updateStatus(item: Verification, newStatus: "verified" | "rejected") {
     const confirmed = window.confirm(
       newStatus === "verified"
         ? (isAZ ? "Bu tələbəni təsdiqləmək istəyirsən?" : "Do you want to approve this student?")
@@ -230,45 +230,41 @@ export default function AdminPage() {
     setProcessing(item.id);
     setMessage("");
 
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setMessage(t.error);
-      setProcessing(null);
-      return;
-    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const { error: verificationError } = await supabase
-      .from("student_verifications")
-      .update({
-        status: newStatus,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: userData.user.id,
-      })
-      .eq("id", item.id);
+      if (!session) {
+        setMessage(t.error);
+        return;
+      }
 
-    if (verificationError) {
-      setMessage(verificationError.message);
-      setProcessing(null);
-      return;
-    }
+      const response = await fetch("/api/admin-student-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          verificationId: item.id,
+          status: newStatus,
+        }),
+      });
 
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ student_status: newStatus })
-      .eq("id", item.user_id);
+      const result = await response.json();
 
-    if (profileError) {
-      setMessage(profileError.message);
-      setProcessing(null);
+      if (!response.ok) {
+        setMessage(result.error || t.error);
+        return;
+      }
+
+      setMessage(t.success);
       await loadApplications();
-      return;
+    } catch {
+      setMessage(t.error);
+    } finally {
+      setProcessing(null);
     }
-
-    setMessage(t.success);
-    setProcessing(null);
-    await loadApplications();
   }
-
   async function updateOrderStatus(order: Order, newStatus: string) {
     const confirmed = window.confirm(
       isAZ
@@ -621,6 +617,20 @@ export default function AdminPage() {
                           {t.reject}
                         </button>
                       </>
+                    )}
+                    {item.status === "verified" && (
+                      <button
+                        disabled={processing === item.id}
+                        onClick={() => updateStatus(item, "verified")}
+                        className="flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        {processing === item.id ? (
+                          <Loader2 size={17} className="animate-spin" />
+                        ) : (
+                          <RefreshCw size={17} />
+                        )}
+                        {isAZ ? "Endirimi sinxronlaşdır" : "Sync student discount"}
+                      </button>
                     )}
                   </div>
                 </article>

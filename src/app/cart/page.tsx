@@ -1,9 +1,9 @@
-﻿
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import Link from "next/link";
+import { products } from "@/data/products";
 import {
   Coffee,
   Minus,
@@ -18,7 +18,55 @@ import {
   X,
 } from "lucide-react";
 import { CartItem, getCart, saveCart } from "@/lib/cart";
+
 import { supabase } from "@/lib/supabase";
+
+type MonthlyRewardType =
+  | "monthly_discount"
+  | "free_addon"
+  | "free_size_upgrade"
+  | "free_drink";
+
+type MonthlyReward = {
+  id: number;
+  reward_name: string;
+  status: "available" | "used";
+  type: MonthlyRewardType;
+};
+
+const FREE_DRINKS = [
+  { id: 1, name: "Espresso" },
+  { id: 2, name: "Americano" },
+  { id: 3, name: "Cappuccino" },
+  { id: 4, name: "Flat White" },
+  { id: 12, name: "Classic Latte" },
+  { id: 13, name: "Classic Iced Coffee" },
+  { id: 15, name: "Iced Americano" },
+  { id: 19, name: "Cold Brew" },
+];
+
+const FREE_ADDONS = [
+  {
+    id: "extra-espresso",
+    en: "Extra espresso shot",
+    az: "Əlavə espresso",
+  },
+  {
+    id: "vanilla-syrup",
+    en: "Vanilla syrup",
+    az: "Vanil siropu",
+  },
+  {
+    id: "caramel-syrup",
+    en: "Caramel syrup",
+    az: "Karamel siropu",
+  },
+  {
+    id: "chocolate-syrup",
+    en: "Chocolate syrup",
+    az: "Şokolad siropu",
+  },
+];
 
 const translations = {
   AZ: {
@@ -27,13 +75,16 @@ const translations = {
     empty: "Səbətiniz hələ boşdur",
     emptyText: "Sevimli qəhvələrinizi seçmək üçün menyumuza keçin.",
     menu: "Menyuya qayıt",
-    total: "Ümumi məbləğ",
+    total: "Yekun məbləğ",
+    subtotal: "Məhsulların cəmi",
     rewards: "ZEBRA BONUSLARI",
     points: "Bonus xalların",
     rewardInfo: "100 xal = 1 AZN endirim",
     usePoints: "Bonus xallarımı istifadə et",
     notEnoughPoints: "Bonus istifadə etmək üçün ən azı 100 xal lazımdır.",
     rewardDiscount: "Bonus endirimi",
+    birthdayDiscount: "Ad günü endirimi (15%)",
+    studentDiscount: "Tələbə endirimi (10%)",
     checkout: "Sifarişi tamamla",
     remove: "Sil",
     login: "Sifariş vermək üçün hesabınıza daxil olun.",
@@ -65,20 +116,41 @@ const translations = {
     demoSuccess: "Demo ödəniş addımı tamamlandı!",
     demoBadge: "DEMO MODE",
     demoNotice: "Real bank əməliyyatı aparılmır.",
+
+    monthlyTitle: "ZEBRA AYLIQ MÜKAFATI",
+    monthlyAvailable: "Bu ayın mükafatı istifadəyə hazırdır.",
+    monthlyUsed: "Bu ayın mükafatı artıq istifadə olunub.",
+    monthlyUse: "Bu ayın mükafatından istifadə et",
+    monthlySelected: "Mükafat seçildi",
+    monthlyDiscount: "5% aylıq üzv endirimi",
+    freeAddon: "Pulsuz espresso və ya sirop",
+    freeSize: "Pulsuz ölçü artımı",
+    freeDrink: "Bir pulsuz standart içki",
+    selectProduct: "Məhsul seçin",
+    selectAddon: "Əlavə seçin",
+    selectSize: "Yeni ölçü seçin",
+    selectDrink: "Pulsuz içki seçin",
+    noEligibleItem: "Bu mükafat üçün uyğun məhsul seçin.",
+    cannotCombine:
+      "Aylıq 5% endirim tələbə və ad günü endirimi ilə birləşdirilmir.",
   },
+
   EN: {
     title: "My Cart",
     subtitle: "Your selected favorites are waiting for you.",
     empty: "Your cart is empty",
     emptyText: "Visit our menu and choose your favorite coffee.",
     menu: "Back to Menu",
-    total: "Total",
+    total: "Final total",
+    subtotal: "Subtotal",
     rewards: "ZEBRA REWARDS",
     points: "Your reward points",
     rewardInfo: "100 points = 1 AZN discount",
     usePoints: "Use my reward points",
     notEnoughPoints: "You need at least 100 points to redeem rewards.",
     rewardDiscount: "Reward discount",
+    birthdayDiscount: "Birthday discount (15%)",
+    studentDiscount: "Student discount (10%)",
     checkout: "Place Order",
     remove: "Remove",
     login: "Please log in to place an order.",
@@ -110,6 +182,23 @@ const translations = {
     demoSuccess: "Demo payment step completed!",
     demoBadge: "DEMO MODE",
     demoNotice: "No real banking transaction takes place.",
+
+    monthlyTitle: "ZEBRA MONTHLY REWARD",
+    monthlyAvailable: "Your monthly reward is ready to use.",
+    monthlyUsed: "This month's reward has already been used.",
+    monthlyUse: "Use this month's reward",
+    monthlySelected: "Reward selected",
+    monthlyDiscount: "5% monthly member discount",
+    freeAddon: "Free espresso shot or syrup",
+    freeSize: "Free size upgrade",
+    freeDrink: "One free standard drink",
+    selectProduct: "Select a product",
+    selectAddon: "Select an add-on",
+    selectSize: "Select new size",
+    selectDrink: "Select a free drink",
+    noEligibleItem: "Select an eligible product for this reward.",
+    cannotCombine:
+      "The monthly 5% discount cannot be combined with student or birthday discounts.",
   },
 };
 
@@ -135,35 +224,149 @@ export default function CartPage() {
   const [rewardPoints, setRewardPoints] = useState(0);
   const [useRewards, setUseRewards] = useState(false);
 
+  const [discountRate, setDiscountRate] = useState(0);
+  const [discountType, setDiscountType] = useState<
+    "birthday" | "student" | null
+  >(null);
+
+  const [monthlyReward, setMonthlyReward] =
+    useState<MonthlyReward | null>(null);
+
+  const [useMonthlyReward, setUseMonthlyReward] = useState(false);
+  const [monthlyTargetKey, setMonthlyTargetKey] = useState("");
+  const [monthlyAddOnId, setMonthlyAddOnId] =
+    useState("extra-espresso");
+  const [monthlySizeId, setMonthlySizeId] = useState("medium");
+  const [monthlyDrinkId, setMonthlyDrinkId] = useState("1");
+
   useEffect(() => {
     setItems(getCart());
     setLoaded(true);
   }, []);
 
   useEffect(() => {
-    async function loadRewardPoints() {
+    async function loadUserDiscounts() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (!session?.user) return;
 
-      const { data, error } = await supabase
+      const userId = session.user.id;
+
+      // Load and synchronize the monthly reward.
+      const { data: syncData, error: syncError } = await supabase.rpc(
+        "sync_monthly_member_reward"
+      );
+
+      if (syncError) {
+        console.error("Monthly reward sync error:", syncError);
+      } else if (syncData?.reward_name && syncData?.reward_month) {
+        const { data: rewardRow, error: rewardError } = await supabase
+          .from("member_rewards")
+          .select("id, reward_name, status")
+          .eq("user_id", userId)
+          .eq("reward_type", "monthly_level_reward")
+          .eq("reward_month", syncData.reward_month)
+          .maybeSingle();
+
+        if (rewardError) {
+          console.error("Monthly reward loading error:", rewardError);
+        } else if (rewardRow) {
+          let rewardType: MonthlyRewardType | null = null;
+
+          if (rewardRow.reward_name === "5% monthly member discount") {
+            rewardType = "monthly_discount";
+          } else if (
+            rewardRow.reward_name ===
+            "One free espresso shot or syrup"
+          ) {
+            rewardType = "free_addon";
+          } else if (
+            rewardRow.reward_name === "One free size upgrade"
+          ) {
+            rewardType = "free_size_upgrade";
+          } else if (
+            rewardRow.reward_name === "One free standard drink"
+          ) {
+            rewardType = "free_drink";
+          }
+
+          if (rewardType) {
+            setMonthlyReward({
+              id: Number(rewardRow.id),
+              reward_name: rewardRow.reward_name,
+              status: rewardRow.status,
+              type: rewardType,
+            });
+          }
+        }
+      }
+
+      const { data: transactions, error: rewardsError } = await supabase
         .from("loyalty_transactions")
         .select("points")
-        .eq("user_id", session.user.id);
+        .eq("user_id", userId);
 
-      if (!error && data) {
-        const balance = data.reduce(
+      if (!rewardsError && transactions) {
+        const balance = transactions.reduce(
           (sum, transaction) => sum + Number(transaction.points),
           0
         );
 
         setRewardPoints(balance);
       }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("birth_date, student_status")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profileError || !profile) return;
+
+      const todayParts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Baku",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+
+      const todayMonth = Number(
+        todayParts.find((part) => part.type === "month")?.value
+      );
+
+      const todayDay = Number(
+        todayParts.find((part) => part.type === "day")?.value
+      );
+
+      const birthDate = profile.birth_date
+        ? String(profile.birth_date).slice(0, 10)
+        : "";
+
+      const birthMonth = birthDate
+        ? Number(birthDate.split("-")[1])
+        : 0;
+
+      const birthDay = birthDate
+        ? Number(birthDate.split("-")[2])
+        : 0;
+
+      const isBirthday =
+        birthMonth === todayMonth && birthDay === todayDay;
+
+      if (isBirthday) {
+        setDiscountRate(0.15);
+        setDiscountType("birthday");
+      } else if (profile.student_status === "verified") {
+        setDiscountRate(0.10);
+        setDiscountType("student");
+      } else {
+        setDiscountRate(0);
+        setDiscountType(null);
+      }
     }
 
-    loadRewardPoints();
+    loadUserDiscounts();
   }, []);
 
   function updateQuantity(key: string, change: number) {
@@ -177,12 +380,23 @@ export default function CartPage() {
 
     setItems(updated);
     saveCart(updated);
+
+    if (monthlyTargetKey === key && !updated.some((item) => item.key === key)) {
+      setMonthlyTargetKey("");
+      setUseMonthlyReward(false);
+    }
   }
 
   function removeItem(key: string) {
     const updated = items.filter((item) => item.key !== key);
+
     setItems(updated);
     saveCart(updated);
+
+    if (monthlyTargetKey === key) {
+      setMonthlyTargetKey("");
+      setUseMonthlyReward(false);
+    }
   }
 
   const total = items.reduce(
@@ -190,19 +404,68 @@ export default function CartPage() {
     0
   );
 
+  const baseDiscount = Number((total * discountRate).toFixed(2));
+
+  const monthlyDiscount =
+    useMonthlyReward &&
+    monthlyReward?.type === "monthly_discount" &&
+    discountRate === 0
+      ? Number((total * 0.05).toFixed(2))
+      : 0;
+
+  const afterBaseDiscount = Math.max(
+    0,
+    total - baseDiscount - monthlyDiscount
+  );
+
   const maxRedeemPoints = Math.min(
     Math.floor(rewardPoints / 100) * 100,
-    Math.floor(total) * 100
+    Math.floor(afterBaseDiscount) * 100
   );
 
   const rewardDiscount = useRewards ? maxRedeemPoints / 100 : 0;
 
-  const payableTotal = Math.max(0, total - rewardDiscount);
+  const payableTotal = Math.max(
+    0,
+    Number((afterBaseDiscount - rewardDiscount).toFixed(2))
+  );
 
   const itemCount = items.reduce(
     (sum, item) => sum + item.quantity,
     0
   );
+
+  const selectedMonthlyItem = items.find(
+    (item) => item.key === monthlyTargetKey
+  );
+const eligibleMonthlyAddonItems = items.filter((item) => {
+  const product = products.find((product) => product.id === item.id);
+
+  return (
+    product &&
+    ["Hot Coffee", "Iced Coffee"].includes(product.category)
+  );
+});
+   
+
+  
+  const monthlySelectionValid =
+    !useMonthlyReward ||
+    !monthlyReward ||
+    monthlyReward.type === "monthly_discount" ||
+    monthlyReward.type === "free_drink" ||
+    (monthlyReward.type === "free_addon" &&
+      eligibleMonthlyAddonItems.some(
+        (item) => item.key === monthlyTargetKey
+      )) ||
+    (monthlyReward.type === "free_size_upgrade" &&
+      Boolean(selectedMonthlyItem) &&
+      (selectedMonthlyItem?.sizeId === "small" ||
+        selectedMonthlyItem?.sizeId === "medium") &&
+      ((selectedMonthlyItem?.sizeId === "small" &&
+        monthlySizeId === "medium") ||
+        (selectedMonthlyItem?.sizeId === "medium" &&
+          monthlySizeId === "large")));
 
   function changeOrderType(type: "delivery" | "pickup") {
     setOrderType(type);
@@ -214,6 +477,14 @@ export default function CartPage() {
 
   async function handleCheckout(confirmDemo = false) {
     if (loading || items.length === 0) return;
+
+    if (
+      useMonthlyReward &&
+      !monthlySelectionValid
+    ) {
+      setError(t.noEligibleItem);
+      return;
+    }
 
     if (
       customerName.trim().length < 2 ||
@@ -257,7 +528,11 @@ export default function CartPage() {
             quantity: item.quantity,
             sizeId: item.sizeId,
             addOnIds: item.addOns.map((addon) => addon.id),
+
+            // Required by the API to identify the selected cart item.
+            cartItemKey: item.key,
           })),
+
           orderType,
           branch,
           customerName,
@@ -265,7 +540,36 @@ export default function CartPage() {
           deliveryAddress: address,
           orderNote: note,
           paymentMethod,
+
           redeemPoints: useRewards ? maxRedeemPoints : 0,
+
+          monthlyReward:
+            useMonthlyReward && monthlyReward
+              ? {
+                  rewardId: monthlyReward.id,
+                  type: monthlyReward.type,
+
+                  ...(monthlyReward.type === "free_addon"
+                    ? {
+                        cartItemKey: monthlyTargetKey,
+                        addOnId: monthlyAddOnId,
+                      }
+                    : {}),
+
+                  ...(monthlyReward.type === "free_size_upgrade"
+                    ? {
+                        cartItemKey: monthlyTargetKey,
+                        sizeId: monthlySizeId,
+                      }
+                    : {}),
+
+                  ...(monthlyReward.type === "free_drink"
+                    ? {
+                        productId: Number(monthlyDrinkId),
+                      }
+                    : {}),
+                }
+              : null,
         }),
       });
 
@@ -344,6 +648,7 @@ export default function CartPage() {
             <div className="mb-8">
               <div className="mb-3 flex items-center gap-3">
                 <ShoppingBag size={27} />
+
                 <h2 className="text-3xl font-black md:text-4xl">
                   {t.title}
                 </h2>
@@ -364,7 +669,9 @@ export default function CartPage() {
                   size={40}
                   className="mx-auto mb-5 text-[#9b7251]"
                 />
+
                 <h3 className="mb-2 text-2xl font-black">{t.empty}</h3>
+
                 <p className="mb-7 text-sm text-[#8b7768]">
                   {t.emptyText}
                 </p>
@@ -379,7 +686,7 @@ export default function CartPage() {
             ) : (
               <div className="grid gap-7 lg:grid-cols-[1fr_380px]">
                 <section className="space-y-4">
-                  {items.map((item) => (
+                 {items.map((item) => (
                     <article
                       key={item.key}
                       className="flex gap-4 rounded-[24px] border border-[#eee5d9] bg-white p-4 shadow-sm"
@@ -630,6 +937,7 @@ export default function CartPage() {
                     </div>
                   )}
 
+                  {/* Existing points rewards */}
                   <div className="rounded-2xl border border-[#e8ddd1] bg-[#faf7f1] p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <h4 className="font-black">{t.rewards}</h4>
@@ -667,16 +975,259 @@ export default function CartPage() {
                     )}
                   </div>
 
+                  {/* Monthly membership reward */}
+                  {monthlyReward && (
+                    <div className="rounded-2xl border border-[#d9c4a8] bg-[#f8f0e5] p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h4 className="font-black">{t.monthlyTitle}</h4>
+                        <span className="text-xl">🎁</span>
+                      </div>
+
+                      <p className="mb-2 text-sm font-bold text-[#553b2c]">
+                        {monthlyReward.type === "monthly_discount" &&
+                          t.monthlyDiscount}
+
+                        {monthlyReward.type === "free_addon" &&
+                          t.freeAddon}
+
+                        {monthlyReward.type === "free_size_upgrade" &&
+                          t.freeSize}
+
+                        {monthlyReward.type === "free_drink" &&
+                          t.freeDrink}
+                      </p>
+
+                      {monthlyReward.status === "used" ? (
+                        <p className="text-sm font-bold text-[#8b7768]">
+                          ✓ {t.monthlyUsed}
+                        </p>
+                      ) : (
+                        <>
+                          <p className="mb-3 text-xs text-[#8b7768]">
+                            {t.monthlyAvailable}
+                          </p>
+
+                          {monthlyReward.type === "free_addon" && (
+                            <>
+                              <label className="mb-1 block text-xs font-bold">
+                                {t.selectProduct}
+                              </label>
+
+                              <select
+                                value={monthlyTargetKey}
+                                onChange={(e) =>
+                                  setMonthlyTargetKey(e.target.value)
+                                }
+                                className={`${inputClass} mb-3`}
+                              >
+                                <option value="">
+                                  {t.selectProduct}
+                                </option>
+
+                                {eligibleMonthlyAddonItems.map((item) => (
+                                  <option
+                                    key={item.key}
+                                    value={item.key}
+                                  >
+                                    {lang === "AZ" ? item.az : item.en}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <label className="mb-1 block text-xs font-bold">
+                                {t.selectAddon}
+                              </label>
+
+                              <select
+                                value={monthlyAddOnId}
+                                onChange={(e) =>
+                                  setMonthlyAddOnId(e.target.value)
+                                }
+                                className={inputClass}
+                              >
+                                {FREE_ADDONS.map((addon) => (
+                                  <option key={addon.id} value={addon.id}>
+                                    {lang === "AZ" ? addon.az : addon.en}
+                                  </option>
+                                ))}
+                              </select>
+                            </>
+                          )}
+
+                          {monthlyReward.type === "free_size_upgrade" && (
+                            <>
+                              <label className="mb-1 block text-xs font-bold">
+                                {t.selectProduct}
+                              </label>
+
+                              <select
+                                value={monthlyTargetKey}
+                                onChange={(e) => {
+                                  const selected = items.find(
+                                    (item) => item.key === e.target.value
+                                  );
+
+                                  setMonthlyTargetKey(e.target.value);
+
+                                  setMonthlySizeId(
+                                    selected?.sizeId === "small"
+                                      ? "medium"
+                                      : "large"
+                                  );
+                                }}
+                                className={`${inputClass} mb-3`}
+                              >
+                                <option value="">
+                                  {t.selectProduct}
+                                </option>
+
+                                {items
+                                  .filter(
+                                    (item) =>
+                                      item.sizeId === "small" ||
+                                      item.sizeId === "medium"
+                                  )
+                                  .map((item) => (
+                                    <option
+                                      key={item.key}
+                                      value={item.key}
+                                    >
+                                      {lang === "AZ" ? item.az : item.en}
+                                      {" — "}
+                                      {lang === "AZ"
+                                        ? item.sizeAz
+                                        : item.sizeEn}
+                                    </option>
+                                  ))}
+                              </select>
+
+                              <label className="mb-1 block text-xs font-bold">
+                                {t.selectSize}
+                              </label>
+
+                              <select
+                                value={monthlySizeId}
+                                onChange={(e) =>
+                                  setMonthlySizeId(e.target.value)
+                                }
+                                className={inputClass}
+                              >
+                                {selectedMonthlyItem?.sizeId === "small" && (
+                                  <option value="medium">
+                                    {lang === "AZ"
+                                      ? "Orta · 350 ml"
+                                      : "Medium · 350 ml"}
+                                  </option>
+                                )}
+
+                                {selectedMonthlyItem?.sizeId === "medium" && (
+                                  <option value="large">
+                                    {lang === "AZ"
+                                      ? "Böyük · 450 ml"
+                                      : "Large · 450 ml"}
+                                  </option>
+                                )}
+                              </select>
+                            </>
+                          )}
+
+                          {monthlyReward.type === "free_drink" && (
+                            <>
+                              <label className="mb-1 block text-xs font-bold">
+                                {t.selectDrink}
+                              </label>
+
+                              <select
+                                value={monthlyDrinkId}
+                                onChange={(e) =>
+                                  setMonthlyDrinkId(e.target.value)
+                                }
+                                className={inputClass}
+                              >
+                                {FREE_DRINKS.map((drink) => (
+                                  <option
+                                    key={drink.id}
+                                    value={drink.id}
+                                  >
+                                    {drink.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </>
+                          )}
+
+                          {monthlyReward.type === "monthly_discount" &&
+                            discountRate > 0 && (
+                              <p className="mb-3 text-xs font-semibold text-amber-800">
+                                {t.cannotCombine}
+                              </p>
+                            )}
+
+                          <button
+                            type="button"
+                            disabled={
+                              (monthlyReward.type === "monthly_discount" &&
+                                discountRate > 0) ||
+                              ((monthlyReward.type === "free_addon" ||
+                                monthlyReward.type === "free_size_upgrade") &&
+                                !monthlyTargetKey) ||
+                              (monthlyReward.type === "free_size_upgrade" &&
+                                !monthlySelectionValid &&
+                                useMonthlyReward)
+                            }
+                            onClick={() => {
+                              setUseMonthlyReward(!useMonthlyReward);
+                              setError("");
+                            }}
+                            className={`mt-3 w-full rounded-full px-4 py-3 text-sm font-bold transition ${
+                              useMonthlyReward
+                                ? "bg-green-800 text-white"
+                                : "bg-[#553b2c] text-white hover:bg-[#79563f]"
+                            } disabled:cursor-not-allowed disabled:opacity-40`}
+                          >
+                            {useMonthlyReward
+                              ? `✓ ${t.monthlySelected}`
+                              : t.monthlyUse}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   <div className="border-t border-[#eee5d9] pt-5">
+                    <div className="mb-2 flex justify-between text-sm text-[#8b7768]">
+                      <span>{t.subtotal}</span>
+                      <span>{total.toFixed(2)} AZN</span>
+                    </div>
+
+                    {baseDiscount > 0 && (
+                      <div className="mb-2 flex justify-between text-sm font-semibold text-green-800">
+                        <span>
+                          {discountType === "birthday"
+                            ? t.birthdayDiscount
+                            : t.studentDiscount}
+                        </span>
+
+                        <span>-{baseDiscount.toFixed(2)} AZN</span>
+                      </div>
+                    )}
+
+                    {monthlyDiscount > 0 && (
+                      <div className="mb-2 flex justify-between text-sm font-semibold text-green-800">
+                        <span>{t.monthlyDiscount}</span>
+                        <span>-{monthlyDiscount.toFixed(2)} AZN</span>
+                      </div>
+                    )}
+
                     {useRewards && rewardDiscount > 0 && (
-                      <div className="mb-2 flex justify-between text-sm text-[#8b7768]">
+                      <div className="mb-2 flex justify-between text-sm text-green-800">
                         <span>{t.rewardDiscount}</span>
                         <span>-{rewardDiscount.toFixed(2)} AZN</span>
                       </div>
                     )}
 
-                    <div className="mb-5 flex items-center justify-between">
-                      <span className="text-sm text-[#8b7768]">
+                    <div className="mb-5 mt-4 flex items-center justify-between border-t border-[#eee5d9] pt-4">
+                      <span className="text-sm font-bold text-[#8b7768]">
                         {t.total}
                       </span>
 
@@ -693,7 +1244,11 @@ export default function CartPage() {
 
                     <button
                       onClick={() => handleCheckout()}
-                      disabled={loading || items.length === 0}
+                      disabled={
+                        loading ||
+                        items.length === 0 ||
+                        (useMonthlyReward && !monthlySelectionValid)
+                      }
                       className="flex w-full items-center justify-center gap-2 rounded-full bg-[#553b2c] px-5 py-4 text-sm font-bold text-white transition hover:bg-[#79563f] disabled:opacity-60"
                     >
                       {loading && (
