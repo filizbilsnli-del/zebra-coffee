@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Coffee,
   Gift,
@@ -17,6 +18,7 @@ import {
   UserRound,
   Wallet,
   Pencil,
+   QrCode,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -56,9 +58,57 @@ export default function LoyaltyPage() {
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const [monthlyReward, setMonthlyReward] =
     useState<MonthlyReward | null>(null);
-
+const [qrToken, setQrToken] = useState("");
+const [qrLoading, setQrLoading] = useState(false);
+const [qrError, setQrError] = useState("");
   const t = (en: string, az: string) => (isAZ ? az : en);
+async function generateCustomerQR() {
+  try {
+    setQrLoading(true);
+    setQrError("");
 
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      setQrError(
+        t("Please sign in again.", "Yenidən hesaba daxil ol.")
+      );
+      return;
+    }
+
+    const response = await fetch("/api/customer-qr", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      cache: "no-store",
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.qrToken) {
+      throw new Error(result.error || "Could not create QR code.");
+    }
+
+    setQrToken(result.qrToken);
+  } catch (error) {
+    console.error("Customer QR error:", error);
+    setQrError(
+      t(
+        "Could not create your QR code. Please try again.",
+        "QR kodunu yaratmaq mümkün olmadı. Yenidən yoxla."
+      )
+    );
+  } finally {
+    setQrLoading(false);
+  }
+}
+useEffect(() => {
+  generateCustomerQR();
+}, []);
   const earned = transactions
     .filter((item) => item.transaction_type === "earned")
     .reduce((sum, item) => sum + item.points, 0);
@@ -373,6 +423,33 @@ export default function LoyaltyPage() {
                   </p>
                 </div>
               </div>
+            </section>
+
+            {/* DIGITAL LOYALTY CARD */}
+            <section className="mb-8 rounded-[2rem] border border-[#eadfd1] bg-white p-7 text-center shadow-sm">
+              <div className="mb-4 flex items-center justify-center gap-2">
+                <QrCode size={24} className="text-[#987253]" />
+                <h2 className="text-xl font-black">
+                  {t("My digital loyalty card", "Mənim rəqəmsal bonus kartım")}
+                </h2>
+              </div>
+
+              <p className="mb-5 text-sm text-[#987b65]">
+                {t(
+                  "Show this QR code to the cashier to identify your loyalty account.",
+                  "Bonus hesabını tanıtmaq üçün bu QR kodu kassirə göstər."
+                )}
+              </p>
+
+              {qrLoading ? (
+                <Loader2 className="mx-auto animate-spin text-[#795b45]" size={35} />
+              ) : qrError ? (
+                <p className="text-sm text-red-600">{qrError}</p>
+              ) : qrToken ? (
+                <div className="mx-auto w-fit rounded-2xl border border-[#eadfd1] bg-white p-4">
+                  <QRCodeSVG value={qrToken} size={210} />
+                </div>
+              ) : null}
             </section>
 
             {/* ZEBRA LEVEL */}
