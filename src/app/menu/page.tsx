@@ -114,105 +114,151 @@ export default function MenuPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f8f5ef] px-4 pb-28 pt-8 text-[#30251f]">
+    <main className="min-h-screen bg-[#F8F5F0] px-4 pb-28 pt-10 text-[#34231D]">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <div>
-            <p className="mb-2 text-sm font-medium uppercase tracking-[0.25em] text-[#98765b]">
-              ZEBRA COFFEE
-            </p>
 
-            <h1 className="text-4xl font-bold">
-              {isAZ ? "Menyumuz" : "Our Menu"}
-            </h1>
+        {/* PAGE INTRO */}
+        <section className="mb-8">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-[#A78A72]">
+            ZEBRA COFFEE
+          </p>
 
-            <p className="mt-2 text-sm text-[#806e62]">
-              {isAZ
-                ? "Sevdiyiniz dadları kəşf edin."
-                : "Discover your favorite flavors."}
-            </p>
-          </div>
-        </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-[#34231D] sm:text-5xl">
+            {isAZ ? "Menyumuz" : "Our Menu"}
+          </h1>
 
-        <div className="mb-7 flex items-center gap-3 rounded-2xl border border-[#eadfd3] bg-white px-4 py-3 shadow-sm">
-          <Search size={20} className="text-[#98765b]" />
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[#78675B] sm:text-base">
+            {isAZ
+              ? "Sevdiyiniz qəhvə və şirniyyatları kəşf edin. Hər fincanda kiçik bir xoşbəxtlik."
+              : "Discover your favorite coffee and desserts. A little happiness in every cup."}
+          </p>
+
+          <div className="mt-5 h-1 w-16 rounded-full bg-[#C89B6D]" />
+        </section>
+
+        {/* SEARCH */}
+        <div className="mb-7 flex items-center gap-3 rounded-2xl border border-[#E8DED2] bg-white px-4 py-4 shadow-sm transition focus-within:border-[#A78A72] focus-within:ring-2 focus-within:ring-[#C89B6D]/20">
+          <Search size={21} className="shrink-0 text-[#A78A72]" />
+
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={isAZ ? "Məhsul axtar..." : "Search products..."}
-            className="w-full bg-transparent text-sm outline-none"
+            className="w-full bg-transparent text-sm text-[#34231D] outline-none placeholder:text-[#A99A8D]"
           />
-        </div>
 
-        <div className="mb-8 flex gap-2 overflow-x-auto pb-2">
-          {categories.map((category) => (
+          {search && (
             <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`whitespace-nowrap rounded-full px-5 py-3 text-sm font-semibold transition ${
-                activeCategory === category
-                  ? "bg-[#4b3328] text-white"
-                  : "border border-[#e7d9cb] bg-white text-[#654d3e] hover:bg-[#f0e7dc]"
-              }`}
+              onClick={() => setSearch("")}
+              className="cursor-pointer rounded-full p-1 text-[#8E7461] transition hover:bg-[#F0E6DA]"
+              aria-label="Clear search"
             >
-              {isAZ ? categoryNames[category] || category : category}
+              <X size={18} />
             </button>
-          ))}
+          )}
         </div>
 
+        {/* CATEGORIES */}
+        <section className="mb-9">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#78675B]">
+              {isAZ ? "Kateqoriyalar" : "Categories"}
+            </h2>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-3">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`cursor-pointer whitespace-nowrap rounded-full border px-5 py-3 text-sm font-semibold transition-all duration-200 ${
+                  activeCategory === category
+                    ? "border-[#553B2C] bg-[#553B2C] text-white shadow-md"
+                    : "border-[#E8DED2] bg-white text-[#654D3E] hover:border-[#A78A72] hover:bg-[#F0E6DA]"
+                }`}
+              >
+                {isAZ ? categoryNames[category] || category : category}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* PRODUCTS TITLE */}
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-bold">
+          <h2 className="text-xl font-extrabold text-[#34231D]">
             {isAZ ? "Məhsullar" : "Products"}
           </h2>
 
-          <span className="text-sm text-[#806e62]">
+          <span className="rounded-full bg-[#F0E6DA] px-3 py-1.5 text-xs font-semibold text-[#78675B]">
             {filteredProducts.length} {isAZ ? "məhsul" : "products"}
           </span>
         </div>
 
+        {/* PRODUCT LIST */}
         {filteredProducts.length === 0 ? (
-          <div className="rounded-2xl bg-white p-10 text-center">
-            <Coffee className="mx-auto mb-3 text-[#98765b]" size={36} />
-            <p className="font-semibold">
+          <div className="rounded-3xl border border-[#E8DED2] bg-white px-6 py-14 text-center shadow-sm">
+            <Coffee className="mx-auto mb-4 text-[#A78A72]" size={42} />
+
+            <p className="font-bold text-[#34231D]">
               {isAZ ? "Məhsul tapılmadı" : "No products found"}
             </p>
+
+            <p className="mt-2 text-sm text-[#78675B]">
+              {isAZ
+                ? "Axtarış sözünü və ya kateqoriyanı dəyişin."
+                : "Try changing your search or category."}
+            </p>
+
+            <button
+              onClick={() => {
+                setSearch("");
+                setActiveCategory("All");
+              }}
+              className="mt-5 cursor-pointer rounded-full bg-[#553B2C] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#80563D]"
+            >
+              {isAZ ? "Bütün məhsullar" : "View all products"}
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((product) => (
               <article
                 key={product.id}
-                className="overflow-hidden rounded-3xl border border-[#eee3d8] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                className="group overflow-hidden rounded-3xl border border-[#E8DED2] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
-                <div className="h-52 overflow-hidden bg-[#eee6dc]">
-                  <img
-                    src={product.image}
-                    alt={isAZ ? product.az : product.en}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                <div className="relative h-56 overflow-hidden bg-[#F0E6DA]">
+  <button
+    type="button"
+    onClick={() => openProduct(product)}
+    className="h-full w-full cursor-pointer"
+    aria-label={isAZ ? `${product.az} seç` : `Select ${product.en}`}
+  >
+    <img
+      src={product.image}
+      alt={isAZ ? product.az : product.en}
+      className="h-full w-full cursor-pointer object-cover transition-transform duration-500 hover:scale-105"
+    />
+  </button>
 
+  <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-1.5 text-sm font-bold text-[#80624D] shadow-md">
+    {product.price.toFixed(2)} ₼
+  </div>
+</div>
                 <div className="p-5">
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-bold">
-                      {isAZ ? product.az : product.en}
-                    </h3>
+                  <h3 className="text-lg font-extrabold text-[#34231D]">
+                    {isAZ ? product.az : product.en}
+                  </h3>
 
-                    <span className="whitespace-nowrap font-bold text-[#98704d]">
-                      {product.price.toFixed(2)} ₼
-                    </span>
-                  </div>
-
-                  <p className="mb-5 min-h-10 text-sm leading-5 text-[#806e62]">
+                  <p className="mb-5 mt-2 min-h-10 text-sm leading-5 text-[#78675B]">
                     {isAZ ? product.descAz : product.descEn}
                   </p>
 
                   <button
                     onClick={() => openProduct(product)}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4b3328] py-3 font-semibold text-white transition hover:bg-[#674a3a]"
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#553B2C] py-3.5 font-bold text-white transition-all duration-200 hover:bg-[#80563D] active:scale-[0.98]"
                   >
-                    <Plus size={18} />
+                    <Plus size={19} />
                     {isAZ ? "Seçim et" : "Customize"}
                   </button>
                 </div>
@@ -222,22 +268,26 @@ export default function MenuPage() {
         )}
       </div>
 
+      {/* PRODUCT CUSTOMIZATION MODAL */}
       {selectedProduct && details && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-[#fffdf9] p-5 shadow-2xl sm:rounded-3xl sm:p-7">
-            <div className="mb-5 flex items-start justify-between">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211710]/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl border border-[#E8DED2] bg-[#FFFDF9] p-5 shadow-2xl sm:rounded-3xl sm:p-7">
+
+            {/* MODAL HEADER */}
+            <div className="mb-5 flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#98765b]">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#A78A72]">
                   ZEBRA COFFEE
                 </p>
-                <h2 className="mt-1 text-2xl font-bold">
+
+                <h2 className="mt-2 text-2xl font-extrabold text-[#34231D]">
                   {isAZ ? selectedProduct.az : selectedProduct.en}
                 </h2>
               </div>
 
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="rounded-full bg-[#f0e7dc] p-2"
+                className="cursor-pointer rounded-full bg-[#F0E6DA] p-2.5 text-[#553B2C] transition hover:bg-[#E8DED2]"
                 aria-label="Close"
               >
                 <X size={21} />
@@ -246,24 +296,27 @@ export default function MenuPage() {
 
             <img
               src={selectedProduct.image}
-              alt={selectedProduct.en}
-              className="mb-5 h-44 w-full rounded-2xl object-cover"
+              alt={isAZ ? selectedProduct.az : selectedProduct.en}
+              className="mb-5 h-48 w-full rounded-2xl object-cover"
             />
 
-            <div className="mb-5 rounded-2xl bg-[#f8f2e9] p-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-[#806e62]">
+            {/* BASE PRICE */}
+            <div className="mb-5 rounded-2xl border border-[#E8DED2] bg-[#F8F5F0] p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[#78675B]">
                   {isAZ ? "Əsas qiymət" : "Base price"}
                 </span>
-                <span className="font-bold">
+
+                <span className="font-extrabold text-[#553B2C]">
                   {selectedProduct.price.toFixed(2)} ₼
                 </span>
               </div>
             </div>
 
+            {/* SIZES */}
             {details.sizes.length > 0 && (
               <section className="mb-6">
-                <h3 className="mb-3 font-bold">
+                <h3 className="mb-3 font-extrabold text-[#34231D]">
                   {isAZ ? "Ölçü seçin" : "Choose size"}
                 </h3>
 
@@ -272,25 +325,27 @@ export default function MenuPage() {
                     <button
                       key={size.id}
                       onClick={() => setSelectedSize(size.id)}
-                      className={`rounded-xl border p-3 text-center text-sm transition ${
+                      className={`cursor-pointer rounded-xl border p-3 text-center transition-all ${
                         selectedSize === size.id
-                          ? "border-[#4b3328] bg-[#4b3328] text-white"
-                          : "border-[#e7d9cb] bg-white"
+                          ? "border-[#553B2C] bg-[#553B2C] text-white shadow-md"
+                          : "border-[#E8DED2] bg-white text-[#654D3E] hover:border-[#A78A72] hover:bg-[#F8F5F0]"
                       }`}
                     >
-                      <span className="block font-semibold">
+                      <span className="block text-sm font-bold">
                         {isAZ
                           ? size.az.split(" · ")[0]
                           : size.en.split(" · ")[0]}
                       </span>
-                      <span className="mt-1 block text-xs">
+
+                      <span className="mt-1 block text-xs opacity-80">
                         {size.id === "small"
                           ? "250 ml"
                           : size.id === "medium"
                             ? "350 ml"
                             : "450 ml"}
                       </span>
-                      <span className="mt-1 block text-xs">
+
+                      <span className="mt-1 block text-xs font-semibold">
                         {size.price === 0
                           ? isAZ
                             ? "Daxildir"
@@ -303,9 +358,10 @@ export default function MenuPage() {
               </section>
             )}
 
+            {/* ADD-ONS */}
             {details.addOns.length > 0 && (
               <section className="mb-6">
-                <h3 className="mb-3 font-bold">
+                <h3 className="mb-3 font-extrabold text-[#34231D]">
                   {isAZ ? "Əlavələr" : "Add-ons"}
                 </h3>
 
@@ -317,29 +373,29 @@ export default function MenuPage() {
                       <button
                         key={addon.id}
                         onClick={() => toggleAddOn(addon.id)}
-                        className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition ${
+                        className={`flex w-full cursor-pointer items-center justify-between rounded-xl border p-3 text-left transition-all ${
                           checked
-                            ? "border-[#98765b] bg-[#f5ede3]"
-                            : "border-[#eee3d8] bg-white"
+                            ? "border-[#A78A72] bg-[#F0E6DA]"
+                            : "border-[#E8DED2] bg-white hover:bg-[#F8F5F0]"
                         }`}
                       >
                         <span className="flex items-center gap-3">
                           <span
                             className={`flex h-5 w-5 items-center justify-center rounded border ${
                               checked
-                                ? "border-[#4b3328] bg-[#4b3328] text-white"
-                                : "border-[#cdbbaa]"
+                                ? "border-[#553B2C] bg-[#553B2C] text-white"
+                                : "border-[#CDBBAA] bg-white"
                             }`}
                           >
                             {checked && <Check size={13} />}
                           </span>
 
-                          <span className="text-sm font-medium">
+                          <span className="text-sm font-medium text-[#553B2C]">
                             {isAZ ? addon.az : addon.en}
                           </span>
                         </span>
 
-                        <span className="text-sm font-bold text-[#98704d]">
+                        <span className="text-sm font-bold text-[#98704D]">
                           +{addon.price.toFixed(2)} ₼
                         </span>
                       </button>
@@ -349,60 +405,63 @@ export default function MenuPage() {
               </section>
             )}
 
-            <section className="mb-6 rounded-2xl border border-[#eee3d8] bg-white p-4">
-              <h3 className="mb-3 flex items-center gap-2 font-bold">
-                <Info size={18} className="text-[#98765b}" />
+            {/* INGREDIENTS AND ALLERGENS */}
+            <section className="mb-6 rounded-2xl border border-[#E8DED2] bg-white p-4">
+              <h3 className="mb-3 flex items-center gap-2 font-extrabold text-[#34231D]">
+                <Info size={18} className="text-[#A78A72]" />
                 {isAZ ? "Məhsulun tərkibi" : "Ingredients"}
               </h3>
 
-              <p className="text-sm leading-6 text-[#806e62]">
+              <p className="text-sm leading-6 text-[#78675B]">
                 {(isAZ
                   ? details.ingredientsAz
                   : details.ingredientsEn
                 ).join(", ")}
               </p>
 
-              <div className="my-4 border-t border-[#eee3d8]" />
+              <div className="my-4 border-t border-[#E8DED2]" />
 
-              <h3 className="mb-2 font-bold">
+              <h3 className="mb-2 font-extrabold text-[#34231D]">
                 {isAZ ? "Allergen məlumatı" : "Allergen information"}
               </h3>
 
               {details.allergensEn.length > 0 ? (
-                <p className="text-sm leading-6 text-[#9a6348]">
+                <p className="text-sm leading-6 text-[#9A6348]">
                   {(isAZ
                     ? details.allergensAz
                     : details.allergensEn
                   ).join(", ")}
                 </p>
               ) : (
-                <p className="text-sm text-[#806e62]">
+                <p className="text-sm text-[#78675B]">
                   {isAZ
                     ? "İlkin resept məlumatında əsas allergen qeyd edilməyib."
                     : "No major allergens are listed in the preliminary recipe information."}
                 </p>
               )}
 
-              <p className="mt-3 text-xs leading-5 text-[#9a8170]">
+              <p className="mt-3 text-xs leading-5 text-[#9A8170]">
                 {isAZ
                   ? "Qeyd: Tərkib və allergen məlumatları ilkin məlumatlardır. Resept və istehsalçı məlumatları ilə təsdiqlənməlidir. Çarpaz təmas ehtimalı mövcuddur."
                   : "Note: Ingredient and allergen information is preliminary and must be verified against recipes and supplier information. Cross-contact may occur."}
               </p>
             </section>
 
-            <div className="sticky bottom-0 border-t border-[#eee3d8] bg-[#fffdf9] pt-4">
+            {/* TOTAL AND ADD TO CART */}
+            <div className="sticky bottom-0 border-t border-[#E8DED2] bg-[#FFFDF9] pt-4">
               <div className="mb-4 flex items-center justify-between">
-                <span className="font-semibold">
+                <span className="font-bold text-[#34231D]">
                   {isAZ ? "Yekun qiymət" : "Total price"}
                 </span>
-                <span className="text-2xl font-bold text-[#98704d]">
+
+                <span className="text-2xl font-extrabold text-[#80563D]">
                   {totalPrice.toFixed(2)} ₼
                 </span>
               </div>
 
               <button
                 onClick={handleAddToCart}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4b3328] py-4 font-bold text-white transition hover:bg-[#674a3a]"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#553B2C] py-4 font-extrabold text-white transition-all hover:bg-[#80563D] active:scale-[0.98]"
               >
                 <ShoppingBag size={19} />
                 {isAZ ? "Səbətə əlavə et" : "Add to cart"}

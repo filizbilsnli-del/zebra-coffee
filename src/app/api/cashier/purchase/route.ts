@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    // Check active cashier
     const { data: staff, error: staffError } = await adminClient
       .from("cashier_staff")
       .select("id")
@@ -64,8 +65,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { qrToken, amount, branch, idempotencyKey } = body;
 
+    const {
+      qrToken,
+      amount,
+      branch,
+      idempotencyKey,
+      pointsToRedeem = 0,
+    } = body;
+
+    // Validate QR token
     if (
       typeof qrToken !== "string" ||
       !/^[a-f0-9]{64}$/i.test(qrToken)
@@ -76,6 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate purchase amount
     if (
       typeof amount !== "number" ||
       !Number.isFinite(amount) ||
@@ -89,6 +99,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate branch
     if (!["Gənclik", "28 May"].includes(branch)) {
       return NextResponse.json(
         { error: "Invalid branch." },
@@ -96,6 +107,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate redemption points
+    if (
+      typeof pointsToRedeem !== "number" ||
+      !Number.isInteger(pointsToRedeem) ||
+      pointsToRedeem < 0 ||
+      pointsToRedeem > 1000000 ||
+      pointsToRedeem % 100 !== 0
+    ) {
+      return NextResponse.json(
+        { error: "Bonus points must be valid multiples of 100." },
+        { status: 400 }
+      );
+    }
+
+    // Validate idempotency key
     const uuidPattern =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -109,10 +135,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Hash QR token
     const tokenHash = createHash("sha256")
       .update(qrToken)
       .digest("hex");
 
+    // Database calculates and applies all discounts.
     const { data, error } = await adminClient.rpc(
       "cashier_record_purchase",
       {
@@ -121,6 +149,7 @@ export async function POST(request: NextRequest) {
         p_amount: amount,
         p_branch: branch,
         p_idempotency_key: idempotencyKey,
+        p_points_to_redeem: pointsToRedeem,
       }
     );
 
@@ -128,7 +157,7 @@ export async function POST(request: NextRequest) {
       console.error("Cashier purchase RPC error:", error);
 
       return NextResponse.json(
-        { error: "Purchase could not be recorded." },
+        { error: error.message || "Purchase could not be recorded." },
         { status: 400 }
       );
     }
@@ -136,8 +165,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        duplicate: data.duplicate,
-        pointsEarned: data.pointsEarned,
+        duplicate: data.duplicate ?? false,
+        pointsEarned: data.pointsEarned ?? 0,
+        pointsRedeemed: data.pointsRedeemed ?? 0,
+        discountAmount: data.discountAmount ?? 0,
+        percentageDiscountAmount:
+          data.percentageDiscountAmount ?? 0,
+        pointsDiscountAmount:
+          data.pointsDiscountAmount ?? 0,
+        discountType: data.discountType ?? "none",
+        discountRate: data.discountRate ?? 0,
+        netAmount:
+          data.netAmount ??
+          Number((amount - (data.discountAmount ?? 0)).toFixed(2)),
+        balanceAfter: data.balanceAfter ?? null,
+        monthlyRewardUsed: data.monthlyRewardUsed ?? false,
       },
       {
         headers: {

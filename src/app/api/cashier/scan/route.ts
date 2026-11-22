@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Kassirin sessiyasını yoxla
+    // 1. Verify cashier session
     const authHeader = request.headers.get("authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Server-side admin client
+    // 2. Admin client
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!serviceKey) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // 3. Kassirin aktivliyini yoxla
+    // 3. Check active cashier
     const { data: staff, error: staffError } = await adminClient
       .from("cashier_staff")
       .select("id")
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. QR tokenini qəbul et
+    // 4. Validate QR token
     const body = await request.json();
     const { qrToken } = body;
 
@@ -80,12 +80,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Tokenin hash-ini hesabla
+    // 5. Hash QR token
     const tokenHash = createHash("sha256")
       .update(qrToken)
       .digest("hex");
 
-    // 6. QR token vasitəsilə müştərini tap
+    // 6. Find customer QR
     const { data: qrRecord, error: qrError } = await adminClient
       .from("customer_qr_tokens")
       .select("id, user_id")
@@ -102,10 +102,10 @@ export async function POST(request: NextRequest) {
 
     const customerId = qrRecord.user_id;
 
-    // 7. Müştərinin profilini əldə et
+    // 7. Load customer profile
     const { data: profile, error: profileError } = await adminClient
       .from("profiles")
-      .select("full_name")
+      .select("full_name, birth_date, student_status")
       .eq("id", customerId)
       .maybeSingle();
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       throw new Error("Could not load customer profile.");
     }
 
-    // 8. Bonus tarixçəsini əldə et
+    // 8. Load loyalty transactions
     const { data: transactions, error: transactionError } =
       await adminClient
         .from("loyalty_transactions")
@@ -128,19 +128,21 @@ export async function POST(request: NextRequest) {
     let lifetimeEarned = 0;
 
     for (const transaction of transactions || []) {
+      const points = Number(transaction.points);
+
       if (transaction.transaction_type === "earned") {
-        balance += transaction.points;
-        lifetimeEarned += transaction.points;
+        balance += points;
+        lifetimeEarned += points;
       }
 
       if (transaction.transaction_type === "redeemed") {
-        balance -= transaction.points;
+        balance -= Math.abs(points);
       }
     }
 
     balance = Math.max(0, balance);
 
-    // 9. Müştərinin səviyyəsini müəyyən et
+    // 9. Calculate membership level
     let level = "Coffee Beginner";
 
     if (lifetimeEarned >= 1000) {
@@ -153,7 +155,83 @@ export async function POST(request: NextRequest) {
       level = "Zebra Friend";
     }
 
-    // 10. QR kodun son istifadə vaxtını yenilə
+    // 10. Check birthday using Baku date
+    const bakuParts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Baku",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+
+    const bakuMonth = bakuParts.find(
+      (part) => part.type === "month"
+    )?.value;
+
+    const bakuDay = bakuParts.find(
+      (part) => part.type === "day"
+    )?.value;
+
+    const birthDate = profile?.birth_date
+      ? String(profile.birth_date).slice(0, 10)
+      : null;
+
+    const birthParts = birthDate?.split("-");
+
+    const isBirthday =
+      !!birthParts &&
+      birthParts.length === 3 &&
+      birthParts[1] === bakuMonth &&
+      birthParts[2] === bakuDay;
+
+    // 11. Check verified student status
+    const isVerifiedStudent =
+      profile?.student_status === "verified";
+
+    // Same priority as the customer app
+    let discountType = "none";
+    let discountRate = 0;
+
+    if (isBirthday) {
+      discountType = "birthday";
+      discountRate = 0.15;
+    } else if (isVerifiedStudent) {
+      discountType = "student";
+      discountRate = 0.10;
+    }
+
+    // 12. Get current Baku month
+    const dateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Baku",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(new Date());
+
+    const year = dateParts.find(
+      (part) => part.type === "year"
+    )?.value;
+
+    const month = dateParts.find(
+      (part) => part.type === "month"
+    )?.value;
+
+    const currentMonth = `${year}-${month}-01`;
+
+    // 13. Find customer's personal monthly reward
+    const { data: monthlyReward, error: rewardError } =
+      await adminClient
+        .from("member_rewards")
+        .select("id, reward_name, reward_month, status")
+        .eq("user_id", customerId)
+        .eq("reward_type", "monthly_level_reward")
+        .eq("reward_month", currentMonth)
+        .eq("status", "available")
+        .maybeSingle();
+
+    if (rewardError) {
+      throw new Error("Could not load monthly member reward.");
+    }
+
+    // 14. Update QR last used time
     const { error: updateError } = await adminClient
       .from("customer_qr_tokens")
       .update({ last_used_at: new Date().toISOString() })
@@ -163,15 +241,31 @@ export async function POST(request: NextRequest) {
       throw new Error("Could not update QR usage.");
     }
 
-    // 11. Müştəri məlumatlarını qaytar
+    // 15. Return customer information
     return NextResponse.json(
       {
         success: true,
         customer: {
+          id: customerId,
           fullName: profile?.full_name || "Customer",
           level,
           balance,
+          lifetimeEarned,
           discountValue: (balance / 100).toFixed(2),
+
+          isBirthday,
+          isVerifiedStudent,
+
+          discountType,
+          discountRate,
+
+          monthlyReward: monthlyReward
+            ? {
+                id: monthlyReward.id,
+                name: monthlyReward.reward_name,
+                status: monthlyReward.status,
+              }
+            : null,
         },
       },
       {

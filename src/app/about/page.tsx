@@ -146,7 +146,7 @@ export default function AboutPage() {
       </header>
 
       {/* HERO */}
-      <section className="relative px-5 pb-20 pt-16 text-center md:pb-28 md:pt-24">
+      <section className="relative mx-auto w-full max-w-[1600px] px-5 pb-20 pt-16 text-center md:px-10 md:pb-28 md:pt-24">
         <div className="absolute left-1/2 top-10 -z-0 h-72 w-72 -translate-x-1/2 rounded-full bg-[#ead9c5] opacity-40 blur-3xl" />
 
         <div className="relative mx-auto max-w-4xl">
@@ -172,7 +172,7 @@ export default function AboutPage() {
       </section>
 
       {/* INTRODUCTION */}
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:px-10 md:py-24">
+      <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:px-8 md:py-24">
         <div className="group relative">
           <div className="absolute -bottom-4 -right-4 h-full w-full rounded-[2rem] bg-[#e9ddce]" />
 
@@ -221,7 +221,7 @@ export default function AboutPage() {
       </section>
 
       {/* VALUES */}
-      <section className="bg-[#f1e9df] px-5 py-20 md:px-10 md:py-24">
+      <section className="w-full bg-[#f1e9df] px-5 py-20 md:px-10 md:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-14 text-center">
             <p className="mb-3 text-xs font-bold tracking-[0.25em] text-[#b78355]">
@@ -284,7 +284,7 @@ export default function AboutPage() {
       </section>
 
       {/* BRANCHES */}
-      <section className="bg-[#f1e9df] px-5 py-20 md:px-10 md:py-24">
+      <section className="w-full bg-[#f1e9df] px-5 py-20 md:px-10 md:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-14 text-center">
             <p className="mb-3 text-xs font-bold tracking-[0.25em] text-[#b78355]">
@@ -359,7 +359,7 @@ export default function AboutPage() {
       </section>
 
       {/* VISIT */}
-      <section className="mx-5 my-16 overflow-hidden rounded-[2rem] bg-[#553b2c] px-6 py-16 text-center text-[#faf7f1] md:mx-auto md:my-24 md:max-w-6xl md:px-12 md:py-20">
+      <section className="mx-auto my-16 w-[calc(100%-2.5rem)] max-w-6xl overflow-hidden rounded-[2rem] bg-[#553b2c] px-6 py-16 text-center text-[#faf7f1] md:my-24 md:px-12 md:py-20">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-[#d6ad83]">
           <Store size={29} />
         </div>
@@ -382,7 +382,7 @@ export default function AboutPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="px-5 pb-8 pt-4 text-center">
+      <footer className="mx-auto w-full max-w-6xl px-5 pb-8 pt-4 text-center">
         <div className="text-2xl font-bold tracking-[0.15em]">
           ZEBRA<span className="text-[#b78355]">.</span>
         </div>

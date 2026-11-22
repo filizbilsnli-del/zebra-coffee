@@ -1,6 +1,5 @@
 ﻿import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import BottomNav from "@/components/BottomNav";
 import GlobalLanguageSwitch from "@/components/GlobalLanguageSwitch";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -8,17 +7,17 @@ import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "Zebra Coffee",
-  description: "Zebra Coffee — Coffee, taste and comfort.",
+  description: "Zebra Coffee — A little happiness in every cup.",
 };
 
 export default function RootLayout({
@@ -27,21 +26,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="az"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="az">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen`}
+      >
         <LanguageProvider>
           <GlobalLanguageSwitch />
-          {children}
+
+          {/* MAIN CONTENT AREA */}
+          <div className="min-h-screen min-w-0 md:pl-[88px]">
+            {children}
+          </div>
+
+          {/* NAVIGATION */}
           <BottomNav />
         </LanguageProvider>
-
-        <Script
-          src="http://millinet.az/site.php?id=828"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );

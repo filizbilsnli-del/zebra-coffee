@@ -305,14 +305,25 @@ export default function CartPage() {
 
       const { data: transactions, error: rewardsError } = await supabase
         .from("loyalty_transactions")
-        .select("points")
+        .select("points, transaction_type")
         .eq("user_id", userId);
 
       if (!rewardsError && transactions) {
-        const balance = transactions.reduce(
-          (sum, transaction) => sum + Number(transaction.points),
-          0
-        );
+        const balance = transactions.reduce((sum, transaction) => {
+  const points = Number(transaction.points);
+
+  if (transaction.transaction_type === "earned") {
+    return sum + points;
+  }
+
+  if (transaction.transaction_type === "redeemed") {
+    return sum - Math.abs(points);
+  }
+
+  return sum;
+}, 0);
+
+setRewardPoints(Math.max(0, balance));
 
         setRewardPoints(balance);
       }
@@ -591,18 +602,18 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-[#e8ddd1] bg-[#faf7f1] px-4 py-3 text-sm outline-none focus:border-[#98704d]";
+    "w-full rounded-xl border border-[#EDE3D8] bg-[#FCFAF6] px-4 py-3 text-base outline-none focus:border-[#98704d]";
 
   if (!loaded) {
-    return <main className="min-h-screen bg-[#faf7f1] pb-28" />;
+    return <main className="min-h-screen bg-[#FCFAF6] pb-28" />;
   }
 
   return (
-    <main className="min-h-screen bg-[#faf7f1] px-5 py-8 pb-28 text-[#38271f] md:px-10">
+    <main className="min-h-screen bg-[#FCFAF6] px-5 py-8 pb-28 text-[#49372C] md:px-10">
       <div className="mx-auto max-w-5xl">
         <header className="mb-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#553b2c] text-xl font-black text-[#f5e7d1]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#76563F] text-xl font-black text-[#f5e7d1]">
               Z
             </div>
 
@@ -610,7 +621,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
               <h1 className="text-xl font-black tracking-[0.16em]">
                 ZEBRA
               </h1>
-              <p className="text-[9px] font-bold tracking-[0.35em] text-[#9a7559]">
+              <p className="text-[9px] font-bold tracking-[0.35em] text-[#A08065]">
                 COFFEE HOUSE
               </p>
             </div>
@@ -618,7 +629,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
         </header>
 
         {successOrder !== null ? (
-          <section className="rounded-[28px] border border-[#eee5d9] bg-white px-6 py-16 text-center shadow-sm">
+          <section className="rounded-[28px] border border-[#F0E8DE] bg-white px-6 py-16 text-center shadow-sm">
             <CheckCircle
               size={58}
               className="mx-auto mb-5 text-green-700"
@@ -626,19 +637,19 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
             <h2 className="mb-3 text-2xl font-black">{t.success}</h2>
 
-            <p className="mb-3 text-sm text-[#8b7768]">
+            <p className="mb-3 text-base text-[#806F62]">
               {t.orderNumber}: #{successOrder}
             </p>
 
             {paymentMethod === "demo_card" && (
-              <p className="mb-6 text-sm font-bold text-amber-700">
+              <p className="mb-6 text-base font-bold text-amber-700">
                 {t.demoSuccess} — {t.demoBadge}
               </p>
             )}
 
             <Link
               href="/menu"
-              className="inline-flex rounded-full bg-[#553b2c] px-7 py-3 text-sm font-bold text-white"
+              className="inline-flex rounded-full bg-[#76563F] px-7 py-3 text-base font-bold text-white"
             >
               {t.continue}
             </Link>
@@ -654,31 +665,31 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                 </h2>
 
                 {itemCount > 0 && (
-                  <span className="rounded-full bg-[#eee3d5] px-3 py-1 text-sm font-bold">
+                  <span className="rounded-full bg-[#eee3d5] px-3 py-1 text-base font-bold">
                     {itemCount}
                   </span>
                 )}
               </div>
 
-              <p className="text-sm text-[#8b7768]">{t.subtitle}</p>
+              <p className="text-base text-[#806F62]">{t.subtitle}</p>
             </div>
 
             {items.length === 0 ? (
               <section className="rounded-[28px] bg-white px-6 py-16 text-center shadow-sm">
                 <Coffee
                   size={40}
-                  className="mx-auto mb-5 text-[#9b7251]"
+                  className="mx-auto mb-5 text-[#A17C5B]"
                 />
 
                 <h3 className="mb-2 text-2xl font-black">{t.empty}</h3>
 
-                <p className="mb-7 text-sm text-[#8b7768]">
+                <p className="mb-7 text-base text-[#806F62]">
                   {t.emptyText}
                 </p>
 
                 <Link
                   href="/menu"
-                  className="rounded-full bg-[#553b2c] px-7 py-3 text-sm font-bold text-white"
+                  className="rounded-full bg-[#76563F] px-7 py-3 text-base font-bold text-white"
                 >
                   {t.menu}
                 </Link>
@@ -689,7 +700,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                  {items.map((item) => (
                     <article
                       key={item.key}
-                      className="flex gap-4 rounded-[24px] border border-[#eee5d9] bg-white p-4 shadow-sm"
+                      className="flex gap-4 rounded-[24px] border border-[#F0E8DE] bg-white p-4 shadow-sm"
                     >
                       <img
                         src={
@@ -706,12 +717,12 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                           {lang === "AZ" ? item.az : item.en}
                         </h3>
 
-                        <p className="mt-1 text-sm font-bold text-[#9b7251]">
+                        <p className="mt-1 text-base font-bold text-[#A17C5B]">
                           {item.price.toFixed(2)} AZN
                         </p>
 
                         {item.sizeEn && (
-                          <p className="mt-2 text-xs text-[#806e62]">
+                          <p className="mt-2 text-base text-[#79695E]">
                             {lang === "AZ" ? "Ölçü:" : "Size:"}{" "}
                             {lang === "AZ" ? item.sizeAz : item.sizeEn}
                           </p>
@@ -719,14 +730,14 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                         {item.addOns.length > 0 && (
                           <div className="mt-2">
-                            <p className="text-xs font-semibold text-[#806e62]">
+                            <p className="text-base font-semibold text-[#79695E]">
                               {lang === "AZ" ? "Əlavələr:" : "Add-ons:"}
                             </p>
 
                             {item.addOns.map((addon) => (
                               <p
                                 key={addon.id}
-                                className="text-xs text-[#806e62]"
+                                className="text-base text-[#79695E]"
                               >
                                 + {lang === "AZ" ? addon.az : addon.en}
                                 {" · "}
@@ -737,7 +748,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                         )}
 
                         <div className="mt-4 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-3 rounded-full bg-[#f5eee5] p-1">
+                          <div className="flex items-center gap-3 rounded-full bg-[#F6EFE6] p-1">
                             <button
                               onClick={() => updateQuantity(item.key, -1)}
                               className="flex h-8 w-8 items-center justify-center rounded-full bg-white"
@@ -759,7 +770,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                           <button
                             onClick={() => removeItem(item.key)}
-                            className="flex items-center gap-1 text-xs font-bold text-[#a46c5b]"
+                            className="flex items-center gap-1 text-base font-bold text-[#a46c5b]"
                           >
                             <Trash2 size={15} />
                             {t.remove}
@@ -770,14 +781,14 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   ))}
                 </section>
 
-                <aside className="h-fit space-y-5 rounded-[26px] border border-[#eee5d9] bg-white p-6 shadow-sm">
+                <aside className="h-fit space-y-5 rounded-[26px] border border-[#F0E8DE] bg-white p-6 shadow-sm">
                   <h3 className="flex items-center gap-2 text-xl font-black">
                     <MapPin size={21} />
                     {t.details}
                   </h3>
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold">
+                    <label className="mb-2 block text-base font-bold">
                       {t.orderType}
                     </label>
 
@@ -785,10 +796,10 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                       <button
                         type="button"
                         onClick={() => changeOrderType("delivery")}
-                        className={`rounded-xl border p-3 text-sm font-bold ${
+                        className={`rounded-xl border p-3 text-base font-bold ${
                           orderType === "delivery"
-                            ? "border-[#553b2c] bg-[#553b2c] text-white"
-                            : "border-[#e8ddd1] bg-[#faf7f1]"
+                            ? "border-[#76563F] bg-[#76563F] text-white"
+                            : "border-[#EDE3D8] bg-[#FCFAF6]"
                         }`}
                       >
                         {t.delivery}
@@ -797,10 +808,10 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                       <button
                         type="button"
                         onClick={() => changeOrderType("pickup")}
-                        className={`rounded-xl border p-3 text-sm font-bold ${
+                        className={`rounded-xl border p-3 text-base font-bold ${
                           orderType === "pickup"
-                            ? "border-[#553b2c] bg-[#553b2c] text-white"
-                            : "border-[#e8ddd1] bg-[#faf7f1]"
+                            ? "border-[#76563F] bg-[#76563F] text-white"
+                            : "border-[#EDE3D8] bg-[#FCFAF6]"
                         }`}
                       >
                         {t.pickup}
@@ -809,7 +820,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold">
+                    <label className="mb-2 block text-base font-bold">
                       {t.branch}
                     </label>
 
@@ -824,7 +835,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold">
+                    <label className="mb-2 block text-base font-bold">
                       {t.name}
                     </label>
 
@@ -837,7 +848,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold">
+                    <label className="mb-2 block text-base font-bold">
                       {t.phone}
                     </label>
 
@@ -852,7 +863,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                   {orderType === "delivery" && (
                     <div>
-                      <label className="mb-2 block text-sm font-bold">
+                      <label className="mb-2 block text-base font-bold">
                         {t.address}
                       </label>
 
@@ -867,7 +878,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   )}
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold">
+                    <label className="mb-2 block text-base font-bold">
                       {t.note}
                     </label>
 
@@ -881,7 +892,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-bold">
+                    <label className="mb-2 block text-base font-bold">
                       {t.payment}
                     </label>
 
@@ -914,56 +925,56 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                   </div>
 
                   {paymentMethod === "demo_card" && (
-                    <div className="rounded-2xl border border-[#e8ddd1] bg-[#faf7f1] p-4">
+                    <div className="rounded-2xl border border-[#EDE3D8] bg-[#FCFAF6] p-4">
                       <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-black tracking-widest">
+                        <span className="text-base font-black tracking-widest">
                           DEMO CARD
                         </span>
 
                         <div className="flex gap-2">
-                          <span className="rounded bg-white px-2 py-1 text-xs font-black text-blue-800">
+                          <span className="rounded bg-white px-2 py-1 text-base font-black text-blue-800">
                             VISA
                           </span>
 
-                          <span className="rounded bg-white px-2 py-1 text-xs font-black text-red-700">
+                          <span className="rounded bg-white px-2 py-1 text-base font-black text-red-700">
                             Mastercard
                           </span>
                         </div>
                       </div>
 
-                      <p className="text-xs leading-5 text-[#8b7768]">
+                      <p className="text-base leading-5 text-[#806F62]">
                         {t.demoText}
                       </p>
                     </div>
                   )}
 
                   {/* Existing points rewards */}
-                  <div className="rounded-2xl border border-[#e8ddd1] bg-[#faf7f1] p-4">
+                  <div className="rounded-2xl border border-[#EDE3D8] bg-[#FCFAF6] p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <h4 className="font-black">{t.rewards}</h4>
                       <span className="text-lg">⭐</span>
                     </div>
 
-                    <p className="text-sm text-[#8b7768]">
+                    <p className="text-base text-[#806F62]">
                       {t.points}: <strong>{rewardPoints}</strong>
                     </p>
 
-                    <p className="mb-3 mt-1 text-xs text-[#9b7251]">
+                    <p className="mb-3 mt-1 text-base text-[#A17C5B]">
                       {t.rewardInfo}
                     </p>
 
                     {maxRedeemPoints >= 100 ? (
-                      <label className="flex cursor-pointer items-center gap-2 text-sm font-bold">
+                      <label className="flex cursor-pointer items-center gap-2 text-base font-bold">
                         <input
                           type="checkbox"
                           checked={useRewards}
                           onChange={(e) => setUseRewards(e.target.checked)}
-                          className="h-4 w-4 accent-[#553b2c]"
+                          className="h-4 w-4 accent-[#76563F]"
                         />
                         {t.usePoints}
                       </label>
                     ) : (
-                      <p className="text-xs text-[#8b7768]">
+                      <p className="text-base text-[#806F62]">
                         {t.notEnoughPoints}
                       </p>
                     )}
@@ -977,13 +988,13 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                   {/* Monthly membership reward */}
                   {monthlyReward && (
-                    <div className="rounded-2xl border border-[#d9c4a8] bg-[#f8f0e5] p-4">
+                    <div className="rounded-2xl border border-[#E9D9C5] bg-[#FBF5EC] p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <h4 className="font-black">{t.monthlyTitle}</h4>
                         <span className="text-xl">🎁</span>
                       </div>
 
-                      <p className="mb-2 text-sm font-bold text-[#553b2c]">
+                      <p className="mb-2 text-base font-bold text-[#76563F]">
                         {monthlyReward.type === "monthly_discount" &&
                           t.monthlyDiscount}
 
@@ -998,18 +1009,18 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                       </p>
 
                       {monthlyReward.status === "used" ? (
-                        <p className="text-sm font-bold text-[#8b7768]">
+                        <p className="text-base font-bold text-[#806F62]">
                           ✓ {t.monthlyUsed}
                         </p>
                       ) : (
                         <>
-                          <p className="mb-3 text-xs text-[#8b7768]">
+                          <p className="mb-3 text-base text-[#806F62]">
                             {t.monthlyAvailable}
                           </p>
 
                           {monthlyReward.type === "free_addon" && (
                             <>
-                              <label className="mb-1 block text-xs font-bold">
+                              <label className="mb-1 block text-base font-bold">
                                 {t.selectProduct}
                               </label>
 
@@ -1034,7 +1045,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                                 ))}
                               </select>
 
-                              <label className="mb-1 block text-xs font-bold">
+                              <label className="mb-1 block text-base font-bold">
                                 {t.selectAddon}
                               </label>
 
@@ -1056,7 +1067,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                           {monthlyReward.type === "free_size_upgrade" && (
                             <>
-                              <label className="mb-1 block text-xs font-bold">
+                              <label className="mb-1 block text-base font-bold">
                                 {t.selectProduct}
                               </label>
 
@@ -1101,7 +1112,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                                   ))}
                               </select>
 
-                              <label className="mb-1 block text-xs font-bold">
+                              <label className="mb-1 block text-base font-bold">
                                 {t.selectSize}
                               </label>
 
@@ -1133,7 +1144,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                           {monthlyReward.type === "free_drink" && (
                             <>
-                              <label className="mb-1 block text-xs font-bold">
+                              <label className="mb-1 block text-base font-bold">
                                 {t.selectDrink}
                               </label>
 
@@ -1158,7 +1169,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
 
                           {monthlyReward.type === "monthly_discount" &&
                             discountRate > 0 && (
-                              <p className="mb-3 text-xs font-semibold text-amber-800">
+                              <p className="mb-3 text-base font-semibold text-amber-800">
                                 {t.cannotCombine}
                               </p>
                             )}
@@ -1179,10 +1190,10 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                               setUseMonthlyReward(!useMonthlyReward);
                               setError("");
                             }}
-                            className={`mt-3 w-full rounded-full px-4 py-3 text-sm font-bold transition ${
+                            className={`mt-3 w-full rounded-full px-4 py-3 text-base font-bold transition ${
                               useMonthlyReward
                                 ? "bg-green-800 text-white"
-                                : "bg-[#553b2c] text-white hover:bg-[#79563f]"
+                                : "bg-[#76563F] text-white hover:bg-[#98765A]"
                             } disabled:cursor-not-allowed disabled:opacity-40`}
                           >
                             {useMonthlyReward
@@ -1194,14 +1205,14 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                     </div>
                   )}
 
-                  <div className="border-t border-[#eee5d9] pt-5">
-                    <div className="mb-2 flex justify-between text-sm text-[#8b7768]">
+                  <div className="border-t border-[#F0E8DE] pt-5">
+                    <div className="mb-2 flex justify-between text-base text-[#806F62]">
                       <span>{t.subtotal}</span>
                       <span>{total.toFixed(2)} AZN</span>
                     </div>
 
                     {baseDiscount > 0 && (
-                      <div className="mb-2 flex justify-between text-sm font-semibold text-green-800">
+                      <div className="mb-2 flex justify-between text-base font-semibold text-green-800">
                         <span>
                           {discountType === "birthday"
                             ? t.birthdayDiscount
@@ -1213,31 +1224,31 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                     )}
 
                     {monthlyDiscount > 0 && (
-                      <div className="mb-2 flex justify-between text-sm font-semibold text-green-800">
+                      <div className="mb-2 flex justify-between text-base font-semibold text-green-800">
                         <span>{t.monthlyDiscount}</span>
                         <span>-{monthlyDiscount.toFixed(2)} AZN</span>
                       </div>
                     )}
 
                     {useRewards && rewardDiscount > 0 && (
-                      <div className="mb-2 flex justify-between text-sm text-green-800">
+                      <div className="mb-2 flex justify-between text-base text-green-800">
                         <span>{t.rewardDiscount}</span>
                         <span>-{rewardDiscount.toFixed(2)} AZN</span>
                       </div>
                     )}
 
-                    <div className="mb-5 mt-4 flex items-center justify-between border-t border-[#eee5d9] pt-4">
-                      <span className="text-sm font-bold text-[#8b7768]">
+                    <div className="mb-5 mt-4 flex items-center justify-between border-t border-[#F0E8DE] pt-4">
+                      <span className="text-base font-bold text-[#806F62]">
                         {t.total}
                       </span>
 
-                      <span className="text-2xl font-black text-[#553b2c]">
+                      <span className="text-2xl font-black text-[#76563F]">
                         {payableTotal.toFixed(2)} AZN
                       </span>
                     </div>
 
                     {error && (
-                      <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+                      <p className="mb-4 rounded-xl bg-red-50 p-3 text-base text-red-700">
                         {error}
                       </p>
                     )}
@@ -1249,7 +1260,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
                         items.length === 0 ||
                         (useMonthlyReward && !monthlySelectionValid)
                       }
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#553b2c] px-5 py-4 text-sm font-bold text-white transition hover:bg-[#79563f] disabled:opacity-60"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#76563F] px-5 py-4 text-base font-bold text-white transition hover:bg-[#98765A] disabled:opacity-60"
                     >
                       {loading && (
                         <Loader2 size={18} className="animate-spin" />
@@ -1271,35 +1282,35 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
             <button
               type="button"
               onClick={() => setShowDemoPayment(false)}
-              className="absolute right-5 top-5 rounded-full bg-[#f5eee5] p-2"
+              className="absolute right-5 top-5 rounded-full bg-[#F6EFE6] p-2"
             >
               <X size={19} />
             </button>
 
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#553b2c] text-white">
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#76563F] text-white">
               <CreditCard size={28} />
             </div>
 
-            <div className="mb-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-black tracking-widest text-amber-800">
+            <div className="mb-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-base font-black tracking-widest text-amber-800">
               {t.demoBadge}
             </div>
 
             <h2 className="mb-3 text-2xl font-black">{t.demoTitle}</h2>
 
-            <p className="mb-6 text-sm leading-6 text-[#8b7768]">
+            <p className="mb-6 text-base leading-6 text-[#806F62]">
               {t.demoText}
             </p>
 
-            <div className="mb-6 rounded-2xl bg-[#faf7f1] p-5">
+            <div className="mb-6 rounded-2xl bg-[#FCFAF6] p-5">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm text-[#8b7768]">{t.total}</span>
+                <span className="text-base text-[#806F62]">{t.total}</span>
 
-                <span className="text-2xl font-black text-[#553b2c]">
+                <span className="text-2xl font-black text-[#76563F]">
                   {payableTotal.toFixed(2)} AZN
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-bold text-green-800">
+              <div className="flex items-center gap-2 text-base font-bold text-green-800">
                 <ShieldCheck size={17} />
                 {t.demoNotice}
               </div>
@@ -1309,7 +1320,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
               type="button"
               onClick={() => handleCheckout(true)}
               disabled={loading}
-              className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-[#553b2c] px-5 py-4 text-sm font-bold text-white hover:bg-[#79563f] disabled:opacity-60"
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-full bg-[#76563F] px-5 py-4 text-base font-bold text-white hover:bg-[#98765A] disabled:opacity-60"
             >
               {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? t.processing : t.demoButton}
@@ -1318,7 +1329,7 @@ const eligibleMonthlyAddonItems = items.filter((item) => {
             <button
               type="button"
               onClick={() => setShowDemoPayment(false)}
-              className="w-full rounded-full border border-[#e8ddd1] px-5 py-3 text-sm font-bold"
+              className="w-full rounded-full border border-[#EDE3D8] px-5 py-3 text-base font-bold"
             >
               {t.demoCancel}
             </button>
