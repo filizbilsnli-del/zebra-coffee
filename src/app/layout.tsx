@@ -34,7 +34,7 @@ export default function RootLayout({
           <GlobalLanguageSwitch />
 
           {/* MAIN CONTENT AREA */}
-          <div className="min-h-screen min-w-0 md:pl-[88px]">
+          <div className="min-h-screen min-w-0">
             {children}
           </div>
 

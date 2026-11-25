@@ -95,12 +95,12 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {/* DESKTOP FLOATING ICON NAVIGATION */}
+      {/* DESKTOP TOP NAVIGATION */}
       <nav
         aria-label={isAZ ? "Əsas naviqasiya" : "Main navigation"}
-        className="fixed left-5 top-1/2 z-40 hidden -translate-y-1/2 md:block"
+        className="fixed left-1/2 top-4 z-50 hidden -translate-x-1/2 md:block"
       >
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center gap-1 rounded-full border border-[#e9dfd2] bg-[#faf7f1]/95 p-2 shadow-lg shadow-[#553b2c]/10 backdrop-blur-xl">
           {items.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
@@ -111,10 +111,10 @@ export default function BottomNav() {
                 href={item.href}
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}
-                className={`group relative flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-xl transition-all duration-300 hover:scale-110 ${
+                className={`group flex h-11 items-center justify-center gap-2 rounded-full px-3 transition-all duration-300 ${
                   active
-                    ? "border-[#553b2c] bg-[#553b2c] text-white shadow-lg shadow-[#553b2c]/25"
-                    : "border-[#e9dfd2] bg-[#faf7f1]/90 text-[#806956] shadow-md shadow-[#553b2c]/10 hover:border-[#553b2c] hover:bg-[#553b2c] hover:text-white"
+                    ? "bg-[#553b2c] text-white shadow-md"
+                    : "text-[#806956] hover:bg-[#eee3d5] hover:text-[#553b2c]"
                 }`}
               >
                 <Icon
@@ -122,13 +122,9 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.5 : 2}
                 />
 
-                <span className="pointer-events-none absolute left-[54px] whitespace-nowrap rounded-full border border-[#e9dfd2] bg-[#faf7f1] px-3 py-2 text-[11px] font-semibold text-[#553b2c] opacity-0 shadow-lg transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100">
+                <span className="hidden whitespace-nowrap text-xs font-semibold lg:inline">
                   {item.label}
                 </span>
-
-                {active && (
-                  <span className="absolute -left-[3px] h-5 w-[3px] rounded-full bg-[#c69a70]" />
-                )}
               </Link>
             );
           })}
